@@ -1,0 +1,24 @@
+export interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  type: "announcement" | "alert" | "reminder" | "message";
+  sender: string;
+  recipients: string;
+  date: string;
+  read: boolean;
+  priority: "high" | "medium" | "low";
+}
+
+export const mockNotifications: Notification[] = [
+  { id: "N001", title: "Mid-Term Exam Schedule Released", message: "The mid-term examination schedule for Classes 6-12 has been finalized. Examinations will commence from June 20, 2026. Please ensure all students are informed and prepared.", type: "announcement", sender: "Admin", recipients: "All Students & Parents", date: "2026-06-10T09:00:00", read: false, priority: "high" },
+  { id: "N002", title: "Fee Payment Reminder — Q2", message: "This is a reminder that Q2 fee payments are due by June 30, 2026. Late payments will incur a 5% surcharge. Please clear all pending dues at the earliest.", type: "reminder", sender: "Admin", recipients: "Parents with Pending Fees", date: "2026-06-09T14:30:00", read: false, priority: "high" },
+  { id: "N003", title: "Science Fair — Call for Entries", message: "The Annual Science Fair will be held on July 5, 2026. Students interested in participating should submit their project proposals to their science teachers by June 18.", type: "announcement", sender: "Science Department", recipients: "All Students", date: "2026-06-08T10:00:00", read: true, priority: "medium" },
+  { id: "N004", title: "Parent-Teacher Meeting Scheduled", message: "A parent-teacher meeting for Classes 9-12 has been scheduled for July 12, 2026. Parents are requested to attend between 9:00 AM and 1:00 PM. Prior appointment is recommended.", type: "announcement", sender: "Admin", recipients: "Parents — Classes 9-12", date: "2026-06-07T11:00:00", read: true, priority: "medium" },
+  { id: "N005", title: "Holiday Notice — Independence Day", message: "The school will remain closed on August 15, 2026 on account of Independence Day. Regular classes will resume on August 16.", type: "announcement", sender: "Admin", recipients: "All", date: "2026-06-06T09:00:00", read: true, priority: "low" },
+  { id: "N006", title: "Staff Meeting — Curriculum Review", message: "All teaching staff are required to attend the curriculum review meeting on June 15 at 3:00 PM in the conference room. Please bring your subject plans for the next quarter.", type: "alert", sender: "Principal", recipients: "All Teachers", date: "2026-06-05T16:00:00", read: true, priority: "medium" },
+  { id: "N007", title: "Library Book Return Deadline", message: "All library books borrowed before May 1 must be returned by June 20. Students with overdue books will not be issued hall tickets for mid-term exams.", type: "reminder", sender: "Library", recipients: "Students with Borrowed Books", date: "2026-06-04T08:30:00", read: true, priority: "medium" },
+  { id: "N008", title: "Bus Route Change — Route 5", message: "Due to road construction on MG Road, Bus Route 5 will be temporarily diverted via Gandhi Nagar from June 12. Pick-up times may vary by 10-15 minutes.", type: "alert", sender: "Transport", recipients: "Route 5 Students & Parents", date: "2026-06-03T15:00:00", read: true, priority: "high" },
+  { id: "N009", title: "Annual Sports Day Registration", message: "Registration for the Annual Sports Day (August 25) is now open. Students can register for up to 3 events through their class teachers. Last date for registration: July 15.", type: "announcement", sender: "Sports Department", recipients: "All Students", date: "2026-06-02T10:00:00", read: true, priority: "low" },
+  { id: "N010", title: "New Teacher Orientation", message: "Welcome to all new faculty members joining this term. An orientation session will be held on June 14 at 10:00 AM in the staff room.", type: "message", sender: "HR", recipients: "New Teachers", date: "2026-06-01T09:00:00", read: true, priority: "low" },
+];
