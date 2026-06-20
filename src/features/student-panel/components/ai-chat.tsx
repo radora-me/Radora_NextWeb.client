@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/componen
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Bot, Send, User, Sparkles, Loader2, Lightbulb } from "lucide-react";
-import { useAiTutorContext, useSendAiMessage } from "@/features/student-panel/api";
+import { useAiTutorContext, useSendAiMessage } from "@/features/student-panel/services";
 
 const containerVariants = {
   hidden: { opacity: 0 },

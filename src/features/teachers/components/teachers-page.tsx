@@ -24,7 +24,7 @@ import {
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/shared/page-header";
 import { mockTeachers } from "@/features/teachers/data/mock-teachers";
-import { useSearchTeacher } from "@/features/students/api";
+import { useSearchTeacher } from "@/features/teachers/services";
 
 const statusStyles: Record<string, string> = {
   active: "bg-emerald-100 text-emerald-700 border-emerald-200",
@@ -227,13 +227,14 @@ export function TeachersPage() {
                 <TableHead>Subject</TableHead>
                 <TableHead className="hidden md:table-cell">Experience</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="w-[50px]" />
+                <TableHead className="hidden lg:table-cell">Classes</TableHead>
+                <TableHead className="w-[100px]" />
               </TableRow>
             </TableHeader>
             <TableBody>
               {paginated.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                     No teachers found matching your filters.
                   </TableCell>
                 </TableRow>
@@ -261,24 +262,48 @@ export function TeachersPage() {
                         {teacher.status}
                       </Badge>
                     </TableCell>
+                    <TableCell className="hidden lg:table-cell">
+                      {teacher.courses && teacher.courses.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {teacher.courses.slice(0, 2).map((c: any, i: number) => (
+                            <Badge key={i} variant="secondary" className="text-[10px] bg-indigo-50 text-indigo-700 border-indigo-200">
+                              {c.title}
+                            </Badge>
+                          ))}
+                          {teacher.courses.length > 2 && (
+                            <Badge variant="secondary" className="text-[10px]">
+                              +{teacher.courses.length - 2}
+                            </Badge>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">None assigned</span>
+                      )}
+                    </TableCell>
                     <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger className="h-8 w-8 inline-flex items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem>
-                            <Link href={`/teachers/${teacher.id}`} className="flex items-center">
-                              <Eye className="mr-2 h-3.5 w-3.5" /> View
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => setAssignTeacherEmail(teacher.email)}>
-                            <div className="flex items-center">
-                              <BookOpen className="mr-2 h-3.5 w-3.5" /> Assign Class
-                            </div>
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-xs text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
+                          onClick={() => setAssignTeacherEmail(teacher.email)}
+                        >
+                          <BookOpen className="mr-1 h-3 w-3" />
+                          Assign
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger className="h-8 w-8 inline-flex items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem>
+                              <Link href={`/teachers/${teacher.id}`} className="flex items-center">
+                                <Eye className="mr-2 h-3.5 w-3.5" /> View Profile
+                              </Link>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))

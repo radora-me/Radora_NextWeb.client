@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     "Production-level school management platform for administrators, teachers, and students.",
 };
 
-import { SessionProvider } from "next-auth/react";
+import { AuthProvider } from "@/features/auth/context/auth-context";
 import { QueryProvider } from "@/components/providers/query-provider";
 
 export default function RootLayout({
@@ -33,11 +33,11 @@ export default function RootLayout({
       className={`${inter.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full">
-        <SessionProvider>
+        <AuthProvider>
           <QueryProvider>
             <TooltipProvider>{children}</TooltipProvider>
           </QueryProvider>
-        </SessionProvider>
+        </AuthProvider>
       </body>
     </html>
   );

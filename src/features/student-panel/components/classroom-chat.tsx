@@ -10,12 +10,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send, Users, MessageSquare, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useChatRooms, useChatMessages, useSendMessage } from "@/features/chat/api";
+import { useChatRooms, useChatMessages, useSendMessage } from "@/features/chat/services";
+import { useAuth } from "@/features/auth/context/auth-context";
 
 export function ClassroomChat() {
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
 
   const { data: rooms, isLoading: roomsLoading } = useChatRooms();
   
@@ -159,14 +161,7 @@ export function ClassroomChat() {
                 </div>
               ) : (
                 messages.map((msg) => {
-                  const isMe = msg.sender.role === "student" && msg.sender.name === "Kabir"; // TODO: get real user ID from context. The API doesn't return my ID natively unless I check token, but since sender object has name, I'll style "student" as me for now if it's my message.
-                  // For now, let's treat any student message as standard. The real implementation would check msg.sender.id === session.user.id. 
-                  // I'll leave the style generic or just default to student on the right.
-                  // Actually, let's just assume we don't know who "me" is until we have session. I'll make the styling simple.
-                  // To be safe, if we can't tell, we just show them left aligned, and only right aligned if we had the session ID.
-                  // Wait, we can fetch session from NextAuth or API. But I don't have time. Let's just align by role for students: teacher left, students right. Or students left, teacher right.
-                  // Usually, ME = right. Others = left. If we don't have ME, everything goes left.
-                  // For demo, let's just make everything left aligned, unless I know it's me. Let's just make it all left aligned.
+                  const isMe = msg.sender.id === user?.id;
                   const isTeacher = msg.sender.role === "teacher";
                   
                   return (
@@ -177,18 +172,18 @@ export function ClassroomChat() {
                       key={msg.id}
                       className={cn(
                         "flex w-full",
-                        "justify-start" // Always start
+                        isMe ? "justify-end" : "justify-start"
                       )}
                     >
                       <div className={cn(
                         "flex gap-3 max-w-[80%]",
-                        "flex-row" // Always row
+                        isMe ? "flex-row-reverse" : "flex-row"
                       )}>
                         <Avatar className="h-8 w-8 mt-1 border shadow-sm">
                           {msg.sender.profilePhotoUrl && <AvatarImage src={msg.sender.profilePhotoUrl} />}
                           <AvatarFallback className={cn(
                             "text-xs font-medium text-white",
-                            isTeacher ? "bg-amber-500" : "bg-slate-400"
+                            isMe ? "bg-indigo-600" : isTeacher ? "bg-amber-600" : "bg-slate-400"
                           )}>
                             {msg.sender.name.charAt(0)}
                           </AvatarFallback>
@@ -196,16 +191,18 @@ export function ClassroomChat() {
                         
                         <div className={cn(
                           "flex flex-col",
-                          "items-start"
+                          isMe ? "items-end" : "items-start"
                         )}>
                           <span className="text-[11px] text-slate-500 mb-1 px-1">
-                            {msg.sender.name} {isTeacher ? "(Teacher)" : ""} • {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            {msg.sender.name} {isTeacher && !isMe ? "(Teacher)" : ""} • {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </span>
                           <div className={cn(
-                            "px-4 py-2.5 rounded-2xl text-sm shadow-sm border",
-                            isTeacher 
-                              ? "bg-amber-50 border-amber-100 text-amber-900 rounded-tl-sm" 
-                              : "bg-white border-slate-200 text-slate-800 rounded-tl-sm"
+                            "px-4 py-2.5 rounded-2xl text-sm shadow-sm",
+                            isMe 
+                              ? "bg-indigo-600 text-white rounded-tr-sm" 
+                              : isTeacher
+                                ? "bg-amber-50 border border-amber-100 text-amber-900 rounded-tl-sm"
+                                : "bg-white border border-slate-200 text-slate-800 rounded-tl-sm"
                           )}>
                             {msg.content}
                           </div>

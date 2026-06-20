@@ -25,7 +25,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { PageHeader } from "@/components/shared/page-header";
 import { mockStudents } from "@/features/students/data/mock-students";
-import { useCreateStudent, useSearchStudent } from "@/features/students/api";
+import { useCreateStudent, useSearchStudent } from "@/features/students/services";
 
 const statusStyles: Record<string, string> = {
   active: "bg-emerald-100 text-emerald-700 border-emerald-200",

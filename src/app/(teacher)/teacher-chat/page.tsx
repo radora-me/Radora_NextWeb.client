@@ -10,12 +10,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send, Users, MessageSquare, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useChatRooms, useChatMessages, useSendMessage } from "@/features/chat/api";
+import { useChatRooms, useChatMessages, useSendMessage } from "@/features/chat/services";
+import { useAuth } from "@/features/auth/context/auth-context";
 
 export default function TeacherChatPage() {
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
 
   const { data: rooms, isLoading: roomsLoading } = useChatRooms();
   
@@ -158,8 +160,9 @@ export default function TeacherChatPage() {
                   No messages yet. Start the conversation!
                 </div>
               ) : (
-                messages.map((msg, index) => {
-                  const isMe = msg.sender.role === "teacher"; // In the Teacher Portal, any teacher message is "me" for style purposes.
+                messages.map((msg) => {
+                  const isMe = msg.sender.id === user?.id;
+                  const isTeacher = msg.sender.role === "teacher";
                   
                   return (
                     <motion.div
@@ -180,7 +183,7 @@ export default function TeacherChatPage() {
                           {msg.sender.profilePhotoUrl && <AvatarImage src={msg.sender.profilePhotoUrl} />}
                           <AvatarFallback className={cn(
                             "text-xs font-medium text-white",
-                            isMe ? "bg-indigo-600" : "bg-slate-400"
+                            isMe ? "bg-indigo-600" : isTeacher ? "bg-amber-600" : "bg-slate-400"
                           )}>
                             {msg.sender.name.charAt(0)}
                           </AvatarFallback>
@@ -191,13 +194,15 @@ export default function TeacherChatPage() {
                           isMe ? "items-end" : "items-start"
                         )}>
                           <span className="text-[11px] text-slate-500 mb-1 px-1">
-                            {msg.sender.name} • {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            {msg.sender.name} {isTeacher && !isMe ? "(Teacher)" : ""} • {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </span>
                           <div className={cn(
                             "px-4 py-2.5 rounded-2xl text-sm shadow-sm",
                             isMe 
                               ? "bg-indigo-600 text-white rounded-tr-sm" 
-                              : "bg-white border border-slate-200 text-slate-800 rounded-tl-sm"
+                              : isTeacher
+                                ? "bg-amber-50 border border-amber-100 text-amber-900 rounded-tl-sm"
+                                : "bg-white border border-slate-200 text-slate-800 rounded-tl-sm"
                           )}>
                             {msg.content}
                           </div>

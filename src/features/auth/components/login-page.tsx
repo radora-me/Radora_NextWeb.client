@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/features/auth/context/auth-context";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -28,6 +28,7 @@ const rolePlaceholders: Record<string, string> = {
 
 export function LoginPage() {
   const router = useRouter();
+  const { login } = useAuth();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [roleType, setRoleType] = useState<"admin" | "teacher" | "student">("admin");
@@ -46,15 +47,10 @@ export function LoginPage() {
     setError("");
 
     try {
-      const result = await signIn("credentials", {
-        identifier,
-        password,
-        roleType,
-        redirect: false,
-      });
+      const result = await login(identifier, password, roleType);
 
-      if (result?.error) {
-        setError("Invalid credentials. Please verify your details.");
+      if (result.error) {
+        setError(result.error);
       } else {
         if (roleType === "student") {
           router.push("/student-dashboard");

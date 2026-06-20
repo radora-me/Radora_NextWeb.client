@@ -29,7 +29,7 @@ import {
   upcomingEvents,
   recentActivities,
 } from "@/features/dashboard/data/mock-dashboard";
-import { useAdminHolidays } from "@/features/students/api";
+import { useAdminHolidays } from "@/features/dashboard/services";
 
 const fadeIn = {
   initial: { opacity: 0, y: 16 },

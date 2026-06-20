@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Calendar, Clock, BookOpen, Bot, MessageSquare, ArrowRight, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 
-import { useStudentDashboard } from "@/features/student-panel/api";
+import { useStudentDashboard } from "@/features/student-panel/services";
 import { Loader2, Calendar as CalendarIcon } from "lucide-react";
 
 const containerVariants = {

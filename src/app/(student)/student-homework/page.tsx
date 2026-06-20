@@ -15,7 +15,7 @@ import {
   Award,
   AlertCircle
 } from "lucide-react";
-import { useStudentHomework } from "@/features/student-panel/api";
+import { useStudentHomework } from "@/features/homework/services";
 
 const containerVariants = {
   hidden: { opacity: 0 },

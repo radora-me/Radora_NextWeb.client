@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { useCreateTeacher } from "@/features/students/api";
+import { useCreateTeacher } from "@/features/teachers/services";
 
 export function CreateTeacherModal({ onClose }: { onClose: () => void }) {
   const [name, setName] = useState("");

@@ -1,24 +1,54 @@
-import { getSession, signOut } from "next-auth/react";
+import { getCookie, setCookie, eraseCookie } from "@/lib/cookies";
 
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
 
 /**
- * Core authenticated fetch. Automatically attaches the Bearer access token from the NextAuth session.
+ * Silent refresh helper: requests a new accessToken from the backend using the stored refreshToken.
+ */
+async function refreshTokens(): Promise<string | null> {
+  const refreshToken = getCookie("radora_refresh_token");
+  if (!refreshToken) return null;
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/auth/refresh`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: refreshToken }),
+    });
+
+    const data = await res.json();
+    if (!res.ok || !data.accessToken) {
+      return null;
+    }
+
+    setCookie("radora_access_token", data.accessToken, 7);
+    return data.accessToken;
+  } catch (e) {
+    console.error("[api-client] Token refresh failed:", e);
+    return null;
+  }
+}
+
+/**
+ * Clears cookies and redirects to the login page.
+ */
+function handleForceLogout() {
+  if (typeof window !== "undefined") {
+    eraseCookie("radora_user");
+    eraseCookie("radora_access_token");
+    eraseCookie("radora_refresh_token");
+    window.location.href = "/login";
+  }
+}
+
+/**
+ * Core authenticated fetch. Automatically attaches the Bearer access token from custom cookies.
  *
- * On a 401 response, it checks if the session has a `RefreshTokenError` and forces a sign-out.
- * NextAuth's JWT callback will have already attempted a silent refresh before this point —
- * if it failed, the session's `error` field will be set to 'RefreshTokenError' or 'RefreshTokenExpired'.
+ * On a 401 response, it attempts to perform a silent refresh using the refresh token, updates
+ * the access token cookie, and retries the original request. If both attempts fail, it logs out.
  */
 export async function fetchWithAuth(endpoint: string, options: RequestInit = {}): Promise<Response> {
-  const session = await getSession();
-
-  // If we know the refresh token is dead, sign the user out proactively
-  if (session?.error === 'RefreshTokenExpired' || session?.error === 'RefreshTokenError') {
-    await signOut({ callbackUrl: '/login' });
-    throw new Error('Session expired. Please log in again.');
-  }
-
-  const token = session?.accessToken;
+  let token = getCookie("radora_access_token");
 
   const headers = new Headers(options.headers);
   if (token) {
@@ -29,17 +59,39 @@ export async function fetchWithAuth(endpoint: string, options: RequestInit = {})
     headers.set("Content-Type", "application/json");
   }
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+  let response = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
     headers,
   });
 
-  // If the backend rejects the token as unauthorized, force sign-out so the
-  // user gets re-directed to login rather than seeing a broken UI.
+  // If unauthorized (401), try to silently refresh token once
   if (response.status === 401) {
-    console.warn(`[api-client] 401 Unauthorized on ${endpoint}. Session may be stale. Signing out.`);
-    await signOut({ callbackUrl: '/login' });
-    throw new Error('Session expired. Please log in again.');
+    console.warn(`[api-client] 401 Unauthorized on ${endpoint}. Attempting silent token refresh...`);
+    const newToken = await refreshTokens();
+    
+    if (newToken) {
+      // Retry request with new token
+      const retryHeaders = new Headers(options.headers);
+      retryHeaders.set("Authorization", `Bearer ${newToken}`);
+      if (!retryHeaders.has("Content-Type") && !(options.body instanceof FormData)) {
+        retryHeaders.set("Content-Type", "application/json");
+      }
+      response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        ...options,
+        headers: retryHeaders,
+      });
+      
+      // If it still fails, log out
+      if (response.status === 401) {
+        console.error(`[api-client] Retry after refresh still failed with 401. Logging out.`);
+        handleForceLogout();
+        throw new Error('Session expired. Please log in again.');
+      }
+    } else {
+      console.error(`[api-client] Token refresh failed. Logging out.`);
+      handleForceLogout();
+      throw new Error('Session expired. Please log in again.');
+    }
   }
 
   return response;

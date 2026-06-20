@@ -12,7 +12,7 @@ import {
   LogOut,
   Settings,
 } from "lucide-react";
-import { signOut, useSession } from "next-auth/react";
+import { useAuth } from "@/features/auth/context/auth-context";
 import {
   Sidebar,
   SidebarContent,
@@ -37,9 +37,8 @@ const navigation = [
 
 export function TeacherSidebar() {
   const pathname = usePathname();
-  const { data: session } = useSession();
+  const { user, logout } = useAuth();
 
-  const user = session?.user;
   const userName = user?.name || "Teacher";
   const userEmail = user?.email || "teacher@radora.com";
   const initials = userName.split(" ").filter(Boolean).slice(0, 2).map(p => p[0]).join("").toUpperCase() || "TE";
@@ -112,7 +111,7 @@ export function TeacherSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton
               render={<button type="button" suppressHydrationWarning />}
-              onClick={() => signOut({ callbackUrl: "/login" })}
+              onClick={logout}
               tooltip="Sign Out"
               className="h-9 text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors cursor-pointer"
             >

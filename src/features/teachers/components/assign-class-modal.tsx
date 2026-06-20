@@ -10,7 +10,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { useAssignClass } from "@/features/students/api";
+import { useAssignClass } from "@/features/teachers/services";
 
 export function AssignClassModal({
   teacherEmail: initialEmail,

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { GraduationCap, LogOut, Settings } from "lucide-react";
-import { signOut, useSession } from "next-auth/react";
+import { useAuth } from "@/features/auth/context/auth-context";
 import { studentNavItems } from "@/config/student-nav-items";
 import {
   Sidebar,
@@ -22,9 +22,8 @@ import {
 
 export function StudentSidebar() {
   const pathname = usePathname();
-  const { data: session } = useSession();
+  const { user, logout } = useAuth();
 
-  const user = session?.user;
   const userName = user?.name || "Student";
   const userRoll = user?.rollNumber ? `Roll No: ${user.rollNumber}` : "Student Portal";
   const initials = userName.split(" ").filter(Boolean).slice(0, 2).map(p => p[0]).join("").toUpperCase() || "ST";
@@ -92,7 +91,7 @@ export function StudentSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton
               render={<button type="button" suppressHydrationWarning />}
-              onClick={() => signOut({ callbackUrl: "/login" })}
+              onClick={logout}
               tooltip="Sign Out"
               className="h-9 text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors cursor-pointer"
             >

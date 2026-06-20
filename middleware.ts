@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/auth';
+import type { NextRequest } from 'next/server';
 
 // Protected route prefixes per role
 const studentRoutePrefixes = [
@@ -32,21 +32,29 @@ const adminRoutePrefixes = [
 
 const authRoutePrefixes = ['/login', '/register'];
 
-export default auth((req) => {
+export function middleware(req: NextRequest) {
   const { nextUrl } = req;
-  const isLoggedIn = !!req.auth;
-  const role = req.auth?.user?.role; // "admin" | "teacher" | "student"
-  const sessionError = (req.auth as any)?.error;
+  
+  // Read token and user info from cookies
+  const accessToken = req.cookies.get('radora_access_token')?.value;
+  const userCookie = req.cookies.get('radora_user')?.value;
+  
+  const isLoggedIn = !!accessToken && !!userCookie;
+  
+  let role: string | undefined;
+  if (userCookie) {
+    try {
+      const parsed = JSON.parse(decodeURIComponent(userCookie));
+      role = parsed?.role;
+    } catch (e) {
+      console.error("Failed to parse user cookie in middleware", e);
+    }
+  }
 
   const isAuthRoute    = authRoutePrefixes.some(p => nextUrl.pathname.startsWith(p));
   const isStudentRoute = studentRoutePrefixes.some(p => nextUrl.pathname.startsWith(p));
   const isTeacherRoute = teacherRoutePrefixes.some(p => nextUrl.pathname.startsWith(p));
   const isAdminRoute   = adminRoutePrefixes.some(p => nextUrl.pathname.startsWith(p));
-
-  // Force sign-out if refresh token is dead
-  if (isLoggedIn && (sessionError === 'RefreshTokenExpired' || sessionError === 'RefreshTokenError')) {
-    return NextResponse.redirect(new URL('/login', nextUrl));
-  }
 
   // Already logged in → redirect away from auth pages
   if (isAuthRoute) {
@@ -79,7 +87,7 @@ export default auth((req) => {
   }
 
   return NextResponse.next();
-});
+}
 
 export const config = {
   matcher: ['/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],

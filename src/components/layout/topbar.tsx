@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { Bell, Search } from "lucide-react";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/features/auth/context/auth-context";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
@@ -41,9 +41,8 @@ function getBreadcrumb(pathname: string): string {
 export function Topbar() {
   const pathname = usePathname();
   const breadcrumb = getBreadcrumb(pathname);
-  const { data: session } = useSession();
+  const { user, logout } = useAuth();
 
-  const user = session?.user;
   const userName = user?.name || "User";
   const userIdentifier = user?.email || user?.rollNumber || "user@radora.com";
   const initials = userName.split(" ").filter(Boolean).slice(0, 2).map(p => p[0]).join("").toUpperCase() || "US";
@@ -102,9 +101,7 @@ export function Topbar() {
             <DropdownMenuSeparator />
             <DropdownMenuItem 
               className="text-red-600 cursor-pointer" 
-              onClick={() => {
-                import("next-auth/react").then((m) => m.signOut({ callbackUrl: "/login" }));
-              }}
+              onClick={logout}
             >
               Sign out
             </DropdownMenuItem>

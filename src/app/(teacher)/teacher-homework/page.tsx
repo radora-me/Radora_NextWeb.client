@@ -12,7 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CloudUpload, Save, Loader2, BookOpen } from "lucide-react";
-import { useTeacherCourses, useTeacherHomework, useCreateHomework } from "@/features/teacher/api";
+import { useTeacherCourses } from "@/features/attendance/services";
+import { useTeacherHomework, useCreateHomework } from "@/features/homework/services";
 
 export default function TeacherHomeworkPage() {
   const [activeTab, setActiveTab] = useState("list");

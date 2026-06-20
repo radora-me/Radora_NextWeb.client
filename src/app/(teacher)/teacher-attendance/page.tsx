@@ -21,7 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { CheckCircle, XCircle, Clock, FileWarning, Calendar, Users, Save, Loader2 } from "lucide-react";
-import { useTeacherCourses, useCourseAttendance, useSubmitAttendance, StudentAttendanceRecord } from "@/features/teacher/api";
+import { useTeacherCourses, useCourseAttendance, useSubmitAttendance, StudentAttendanceRecord } from "@/features/attendance/services";
 
 type AttendanceStatus = "PRESENT" | "ABSENT" | "LATE" | "HALF_DAY";
 
