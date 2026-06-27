@@ -2,98 +2,81 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { setCookie, getCookie, eraseCookie } from "@/lib/cookies";
 import { UserRole } from "@/types";
 
 export interface User {
   id: string;
   name: string;
-  email?: string;
-  rollNumber?: string;
+  email?: string | null;
+  rollNumber?: string | null;
   role: UserRole;
   image?: string | null;
 }
 
 interface AuthContextType {
   user: User | null;
-  accessToken: string | null;
   loading: boolean;
-  login: (identifier: string, password: string, roleType: "admin" | "teacher" | "student") => Promise<{ error?: string }>;
-  logout: () => void;
+  login: (
+    identifier: string,
+    password: string,
+    roleType: "admin" | "teacher" | "student"
+  ) => Promise<{ error?: string }>;
+  logout: () => Promise<void>;
   refreshSession: () => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [accessToken, setAccessToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  // Initialize auth state from cookies
+  // On mount: hydrate user state from the server-side /api/auth/me endpoint.
+  // This reads the HttpOnly access token cookie server-side so the token
+  // is never exposed to JavaScript at all.
   useEffect(() => {
-    const userCookie = getCookie("radora_user");
-    const tokenCookie = getCookie("radora_access_token");
-    if (userCookie && tokenCookie) {
+    (async () => {
       try {
-        setUser(JSON.parse(userCookie));
-        setAccessToken(tokenCookie);
-      } catch (e) {
-        console.error("Failed to parse user cookie", e);
+        const res = await fetch("/api/auth/me", { credentials: "same-origin" });
+        if (res.ok) {
+          const data = await res.json();
+          setUser(data.user ?? null);
+        } else {
+          setUser(null);
+        }
+      } catch {
+        setUser(null);
+      } finally {
+        setLoading(false);
       }
-    }
-    setLoading(false);
+    })();
   }, []);
 
+  /**
+   * Login: calls the Next.js proxy which forwards credentials to the backend
+   * and sets HttpOnly cookies. Tokens never reach browser JavaScript.
+   */
   const login = async (
     identifier: string,
     password: string,
     roleType: "admin" | "teacher" | "student"
   ): Promise<{ error?: string }> => {
-    let endpoint = `${API_BASE}/auth/login/teacher`;
-    let payload: any = { email: identifier, password };
-
-    if (roleType === "student") {
-      endpoint = `${API_BASE}/auth/login/student`;
-      payload = { rollNumber: identifier, password };
-    } else if (roleType === "admin") {
-      endpoint = `${API_BASE}/auth/login/teacher`;
-      payload = { email: identifier, password };
-    }
-
     try {
-      const res = await fetch(endpoint, {
+      const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        credentials: "same-origin",
+        body: JSON.stringify({ identifier, password, roleType }),
       });
 
       const data = await res.json();
 
       if (!res.ok || !data.user) {
-        return { error: data.error || data.message || "Invalid credentials" };
+        return { error: data.error || "Invalid credentials" };
       }
 
-      const userData: User = {
-        id: data.user.id,
-        name: data.user.name,
-        email: data.user.email,
-        rollNumber: data.user.rollNumber,
-        role: data.user.role,
-        image: data.user.profilePhotoUrl,
-      };
-
-      // Set cookies for 7 days
-      setCookie("radora_user", JSON.stringify(userData), 7);
-      setCookie("radora_access_token", data.accessToken, 7);
-      setCookie("radora_refresh_token", data.refreshToken, 7);
-
-      setUser(userData);
-      setAccessToken(data.accessToken);
-
+      setUser(data.user);
       return {};
     } catch (err: any) {
       console.error("Login request failed:", err);
@@ -101,57 +84,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const logout = () => {
-    eraseCookie("radora_user");
-    eraseCookie("radora_access_token");
-    eraseCookie("radora_refresh_token");
+  /**
+   * Logout: calls the server-side proxy which clears the HttpOnly cookies.
+   * JavaScript alone cannot clear HttpOnly cookies — the server must do it.
+   */
+  const logout = async (): Promise<void> => {
+    try {
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "same-origin",
+      });
+    } catch {
+      // best-effort
+    }
     setUser(null);
-    setAccessToken(null);
     router.push("/login");
   };
 
+  /**
+   * Refresh session: calls the server-side refresh proxy which reads the
+   * HttpOnly refresh token, gets a new access token, and re-sets the cookie.
+   */
   const refreshSession = async (): Promise<boolean> => {
-    const refreshToken = getCookie("radora_refresh_token");
-    if (!refreshToken) {
-      logout();
-      return false;
-    }
-
     try {
-      const res = await fetch(`${API_BASE}/auth/refresh`, {
+      const res = await fetch("/api/auth/refresh", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: refreshToken }),
+        credentials: "same-origin",
       });
 
-      const data = await res.json();
-
       if (!res.ok) {
-        logout();
+        await logout();
         return false;
       }
 
-      setCookie("radora_access_token", data.accessToken, 7);
-      setAccessToken(data.accessToken);
       return true;
-    } catch (err) {
-      console.error("Failed to refresh session:", err);
-      logout();
+    } catch {
+      await logout();
       return false;
     }
   };
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        accessToken,
-        loading,
-        login,
-        logout,
-        refreshSession,
-      }}
-    >
+    <AuthContext.Provider value={{ user, loading, login, logout, refreshSession }}>
       {children}
     </AuthContext.Provider>
   );

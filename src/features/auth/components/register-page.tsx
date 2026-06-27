@@ -20,7 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
+// Registration goes through the Next.js proxy — browser never calls the backend directly.
 
 export function RegisterPage() {
   const router = useRouter();
@@ -57,9 +57,10 @@ export function RegisterPage() {
     setLoading(true);
 
     try {
-      const response = await fetch(`${API_BASE}/auth/register`, {
+      const response = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify({ name: name.trim(), email: email.trim().toLowerCase(), password }),
       });
 

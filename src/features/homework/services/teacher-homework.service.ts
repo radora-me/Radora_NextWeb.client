@@ -47,3 +47,50 @@ export function useCreateHomework() {
     },
   });
 }
+
+export function useUpdateHomework() {
+  return useMutation({
+    mutationFn: async ({
+      homeworkId,
+      data,
+    }: {
+      homeworkId: string;
+      data: {
+        title?: string;
+        description?: string;
+        dueAt?: string;
+        totalMarks?: number;
+        status?: "PUBLISHED" | "DRAFT";
+        attachments?: { fileName: string; base64: string; mimeType: string }[];
+      };
+    }) => {
+      const response = await fetchWithAuth(`/homework/teacher/${homeworkId}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+      });
+
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || result.message || "Failed to update homework");
+      }
+      return result;
+    },
+  });
+}
+
+export function useDeleteHomework() {
+  return useMutation({
+    mutationFn: async (homeworkId: string) => {
+      const response = await fetchWithAuth(`/homework/teacher/${homeworkId}`, {
+        method: "DELETE",
+      });
+
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || result.message || "Failed to delete homework");
+      }
+      return result;
+    },
+  });
+}
+

@@ -1,7 +1,22 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-// Protected route prefixes per role
+/**
+ * Edge Middleware — Route Protection & RBAC
+ *
+ * Security model:
+ *  - `radora_access_token` and `radora_refresh_token` are HttpOnly cookies.
+ *    The Edge middleware cannot read them (they are forwarded to the origin).
+ *    Their PRESENCE is what middleware checks — we detect them via cookie name.
+ *
+ *  - `radora_role` is a plain (non-HttpOnly) cookie containing only the role
+ *    string ("admin" | "teacher" | "student"). It contains NO sensitive data
+ *    and is used solely for routing decisions at the edge. An attacker who
+ *    tampers with it only changes their own redirect destination — they still
+ *    cannot access any protected data because the backend validates the
+ *    HttpOnly access token on every API request.
+ */
+
 const studentRoutePrefixes = [
   '/student-dashboard',
   '/student-attendance',
@@ -34,22 +49,15 @@ const authRoutePrefixes = ['/login', '/register'];
 
 export function middleware(req: NextRequest) {
   const { nextUrl } = req;
-  
-  // Read token and user info from cookies
-  const accessToken = req.cookies.get('radora_access_token')?.value;
-  const userCookie = req.cookies.get('radora_user')?.value;
-  
-  const isLoggedIn = !!accessToken && !!userCookie;
-  
-  let role: string | undefined;
-  if (userCookie) {
-    try {
-      const parsed = JSON.parse(decodeURIComponent(userCookie));
-      role = parsed?.role;
-    } catch (e) {
-      console.error("Failed to parse user cookie in middleware", e);
-    }
-  }
+
+  // Check presence of the HttpOnly access token cookie.
+  // We can see its name but NOT its value in Edge middleware — that's intentional.
+  const hasToken = !!req.cookies.get('radora_access_token')?.value;
+
+  // Read the plain role cookie (non-sensitive, contains only role string)
+  const role = req.cookies.get('radora_role')?.value;
+
+  const isLoggedIn = hasToken && !!role;
 
   const isAuthRoute    = authRoutePrefixes.some(p => nextUrl.pathname.startsWith(p));
   const isStudentRoute = studentRoutePrefixes.some(p => nextUrl.pathname.startsWith(p));
@@ -66,7 +74,7 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Not logged in → block protected routes and redirect to login
+  // Not logged in → block protected routes
   if (!isLoggedIn && (isStudentRoute || isTeacherRoute || isAdminRoute)) {
     const loginUrl = new URL('/login', nextUrl);
     loginUrl.searchParams.set('callbackUrl', nextUrl.pathname);
