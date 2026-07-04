@@ -4,6 +4,7 @@ import { fetchJsonWithAuth, fetchWithAuth } from "@/lib/api-client";
 export interface TeacherAttendanceCourse {
   id: string;
   title: string;
+  description: string; // section e.g. "A"
   _count: { enrollments: number };
 }
 

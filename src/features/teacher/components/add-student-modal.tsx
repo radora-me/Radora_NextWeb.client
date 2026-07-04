@@ -70,7 +70,7 @@ export function AddStudentModal({ onClose }: { onClose: () => void }) {
       return;
     }
     if (selectedCourseIds.length === 0) {
-      setFormError("Please select at least one course to enroll the student.");
+      setFormError("Please select a class to enroll the student.");
       return;
     }
 
@@ -103,7 +103,7 @@ export function AddStudentModal({ onClose }: { onClose: () => void }) {
               </div>
               <div>
                 <h2 className="text-base font-semibold text-slate-900 dark:text-white">Add Student to Class</h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Search by roll number and enroll into your courses</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Search by roll number and enroll into your classes</p>
               </div>
             </div>
             <button
@@ -128,7 +128,7 @@ export function AddStudentModal({ onClose }: { onClose: () => void }) {
                   <p className="text-lg font-semibold text-slate-900 dark:text-white">Student Added!</p>
                   <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                     <span className="font-medium text-indigo-600">{student?.name}</span> (Roll #{debouncedRoll}) has been
-                    successfully enrolled in {selectedCourseIds.length} course{selectedCourseIds.length !== 1 ? "s" : ""}.
+                    successfully enrolled in {selectedCourseIds.length} class{selectedCourseIds.length !== 1 ? "es" : ""}.
                   </p>
                 </div>
                 <div className="flex gap-3 pt-2">
@@ -259,15 +259,15 @@ export function AddStudentModal({ onClose }: { onClose: () => void }) {
                     className="space-y-2"
                   >
                     <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                      Select Courses to Enroll
+                      Select Class to Enroll
                     </Label>
                     {coursesLoading ? (
                       <div className="flex items-center gap-2 text-sm text-slate-400 py-2">
-                        <Loader2 className="h-4 w-4 animate-spin" /> Loading your courses...
+                        <Loader2 className="h-4 w-4 animate-spin" /> Loading your classes...
                       </div>
                     ) : courses.length === 0 ? (
                       <p className="text-sm text-slate-400 italic">
-                        You have no courses assigned. Ask your admin to assign a class first.
+                        You have no classes assigned. Ask your admin to assign a class first.
                       </p>
                     ) : (
                       <div className="grid grid-cols-1 gap-2">

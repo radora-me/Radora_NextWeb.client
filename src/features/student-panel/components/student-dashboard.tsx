@@ -10,6 +10,8 @@ import Link from "next/link";
 import { useStudentDashboard } from "@/features/student-panel/services";
 import { Loader2, Calendar as CalendarIcon } from "lucide-react";
 
+import { Skeleton } from "@/components/ui/skeleton";
+
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
@@ -25,8 +27,46 @@ export function StudentDashboard() {
 
   if (isLoading) {
     return (
-      <div className="flex h-[calc(100vh-100px)] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
+      <div className="space-y-6">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="rounded-xl border bg-card text-card-foreground shadow p-6 space-y-4">
+              <div className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <Skeleton className="h-4 w-[100px]" />
+                <Skeleton className="h-4 w-4 rounded-full" />
+              </div>
+              <Skeleton className="h-8 w-[60px]" />
+              <Skeleton className="h-3 w-[140px]" />
+            </div>
+          ))}
+        </div>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
+          <div className="col-span-4 rounded-xl border bg-card text-card-foreground shadow p-6 space-y-4">
+            <Skeleton className="h-6 w-[150px] mb-4" />
+            <div className="space-y-4">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="flex flex-col space-y-2 border-b pb-4">
+                  <Skeleton className="h-4 w-[250px]" />
+                  <Skeleton className="h-3 w-[150px]" />
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="col-span-3 rounded-xl border bg-card text-card-foreground shadow p-6 space-y-4">
+            <Skeleton className="h-6 w-[150px] mb-4" />
+            <div className="space-y-4">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="flex items-center space-x-4">
+                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-[120px]" />
+                    <Skeleton className="h-3 w-[80px]" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
