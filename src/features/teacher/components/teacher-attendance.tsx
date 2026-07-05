@@ -23,6 +23,7 @@ import {
 import { CheckCircle, XCircle, Clock, Calendar, Users, Save, Loader2 } from "lucide-react";
 import { useTeacherCourses, useCourseAttendance, useSubmitAttendance, StudentAttendanceRecord } from "@/features/attendance/services";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
 
 type AttendanceStatus = "PRESENT" | "ABSENT" | "LATE";
 
@@ -98,11 +99,11 @@ export function TeacherAttendance() {
       },
       {
         onSuccess: () => {
-          alert("Attendance submitted successfully!");
+          toast.success("Attendance submitted successfully!");
           refetchAttendance(); // Refresh to get updated 'isMarked' flags
         },
         onError: (err) => {
-          alert(`Failed to submit attendance: ${err.message}`);
+          toast.error(`Failed to submit attendance: ${err.message}`);
         }
       }
     );

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { GraduationCap, LogOut, Settings } from "lucide-react";
 import { useAuth } from "@/features/auth/context/auth-context";
@@ -37,12 +38,12 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" className="border-r-0">
       <SidebarHeader className="p-4 group-data-[state=collapsed]:px-2 group-data-[state=collapsed]:py-4">
         <Link href="/dashboard" className="flex items-center gap-3 group/header group-data-[state=collapsed]:justify-center">
-          <div className="flex h-9 w-9 group-data-[state=collapsed]:h-8 group-data-[state=collapsed]:w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-400 to-indigo-600 shadow-lg shadow-indigo-500/20 transition-transform group-hover/header:scale-105">
-            <GraduationCap className="h-5 w-5 group-data-[state=collapsed]:h-4 group-data-[state=collapsed]:w-4 text-white" />
-          </div>
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-500/20">
+              <Image src="/logo/Next.png" alt="Logo" width={48} height={48} className="object-cover rounded-xl" />
+            </div>
           <div className="flex flex-col group-data-[collapsible=icon]:hidden">
             <span className="text-sm font-bold tracking-tight text-sidebar-foreground">
-              Radora
+              Radora Next
             </span>
             <span className="text-[11px] text-sidebar-foreground/60">
               School Management

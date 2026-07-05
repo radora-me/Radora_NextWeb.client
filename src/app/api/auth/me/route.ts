@@ -46,7 +46,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const data = await backendRes.json();
+    const contentType = backendRes.headers.get("content-type");
+    const isJson = contentType && contentType.includes("application/json");
+    const data = isJson ? await backendRes.json() : {};
 
     const userProfile = {
       id: data.id ?? data._id,

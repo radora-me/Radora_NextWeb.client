@@ -30,9 +30,11 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({ token: decodeURIComponent(refreshToken) }),
     });
 
-    const data = await backendRes.json();
+    const contentType = backendRes.headers.get("content-type");
+    const isJson = contentType && contentType.includes("application/json");
+    const data = isJson ? await backendRes.json() : { message: "Server returned an invalid response" };
 
-    if (!backendRes.ok || !data.accessToken) {
+    if (!backendRes.ok || (isJson && !data.accessToken)) {
       // Refresh failed — clear all auth cookies
       const response = NextResponse.json(
         { error: "Session expired" },

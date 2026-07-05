@@ -18,7 +18,9 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({ name, email, password }),
     });
 
-    const data = await backendRes.json();
+    const contentType = backendRes.headers.get("content-type");
+    const isJson = contentType && contentType.includes("application/json");
+    const data = isJson ? await backendRes.json() : { message: "Server returned an invalid response" };
 
     if (!backendRes.ok) {
       return NextResponse.json(

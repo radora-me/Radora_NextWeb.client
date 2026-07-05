@@ -1,8 +1,38 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { UserRole } from "@/types";
+
+const studentRoutePrefixes = [
+  '/student-dashboard',
+  '/student-attendance',
+  '/student-timetable',
+  '/student-ai-chat',
+  '/student-classroom-chat',
+];
+
+const teacherRoutePrefixes = [
+  '/teacher-dashboard',
+  '/teacher-students',
+  '/teacher-attendance',
+  '/teacher-homework',
+  '/teacher-chat',
+];
+
+const adminRoutePrefixes = [
+  '/dashboard',
+  '/attendance',
+  '/timetable',
+  '/exams',
+  '/fees',
+  '/notifications',
+  '/settings',
+  '/students',
+  '/teachers',
+];
+
+const authRoutePrefixes = ['/login', '/register'];
 
 export interface User {
   id: string;
@@ -31,6 +61,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const pathname = usePathname();
+
+  // Client-side route protection (protects against browser back/forward cache)
+  useEffect(() => {
+    if (loading) return;
+
+    const isAuthRoute = authRoutePrefixes.some(p => pathname.startsWith(p));
+    const isStudentRoute = studentRoutePrefixes.some(p => pathname.startsWith(p));
+    const isTeacherRoute = teacherRoutePrefixes.some(p => pathname.startsWith(p));
+    const isAdminRoute = adminRoutePrefixes.some(p => pathname.startsWith(p));
+
+    if (!user && (isStudentRoute || isTeacherRoute || isAdminRoute)) {
+      router.push(`/login?callbackUrl=${encodeURIComponent(pathname)}`);
+      return;
+    }
+
+    if (user) {
+      if (user.role === 'student' && (isAdminRoute || isTeacherRoute)) {
+        router.push('/student-dashboard');
+      } else if (user.role === 'teacher' && (isAdminRoute || isStudentRoute)) {
+        router.push('/teacher-dashboard');
+      } else if (user.role === 'admin' && (isStudentRoute || isTeacherRoute)) {
+        router.push('/dashboard');
+      } else if (isAuthRoute) {
+        if (user.role === 'student') router.push('/student-dashboard');
+        else if (user.role === 'teacher') router.push('/teacher-dashboard');
+        else router.push('/dashboard');
+      }
+    }
+  }, [user, loading, pathname, router]);
 
   // On mount: hydrate user state from the server-side /api/auth/me endpoint.
   // This reads the HttpOnly access token cookie server-side so the token
@@ -40,8 +100,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const res = await fetch("/api/auth/me", { credentials: "same-origin" });
         if (res.ok) {
-          const data = await res.json();
-          setUser(data.user ?? null);
+          const contentType = res.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            const data = await res.json();
+            setUser(data.user ?? null);
+          } else {
+            setUser(null);
+          }
         } else {
           setUser(null);
         }
