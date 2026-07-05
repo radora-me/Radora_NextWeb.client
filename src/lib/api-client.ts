@@ -101,10 +101,24 @@ export async function fetchJsonWithAuth<T>(
     return {} as T;
   }
 
-  const data = await response.json();
+  const contentType = response.headers.get("content-type");
+  const isJson = contentType && contentType.includes("application/json");
+
+  let data: any;
+  if (isJson) {
+    try {
+      data = await response.json();
+    } catch (e) {
+      data = { message: "Invalid JSON response from server" };
+    }
+  } else {
+    // If it's an HTML error page or text, get it as text
+    const text = await response.text();
+    data = { message: !response.ok ? "Server Error: The server returned an invalid response." : text };
+  }
 
   if (!response.ok) {
-    throw new Error(data.error || data.message || "An error occurred while fetching data");
+    throw new Error(data.error || data.message || `HTTP Error ${response.status}`);
   }
 
   return data as T;

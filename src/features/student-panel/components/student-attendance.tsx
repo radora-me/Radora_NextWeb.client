@@ -16,6 +16,8 @@ import {
   Send
 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
+import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -46,7 +48,7 @@ export function StudentAttendance() {
   const handleApplyLeave = (e: React.FormEvent) => {
     e.preventDefault();
     if (!fromDate || !toDate || !reason) {
-      alert("Please fill in all fields.");
+      toast.error("Please fill in all fields.");
       return;
     }
 
@@ -54,14 +56,14 @@ export function StudentAttendance() {
       { fromDate, toDate, reason },
       {
         onSuccess: () => {
-          alert("Leave application submitted successfully!");
+          toast.success("Leave application submitted successfully!");
           setFromDate("");
           setToDate("");
           setReason("");
           refetchLeave();
         },
         onError: (error: any) => {
-          alert(`Error applying for leave: ${error.message}`);
+          toast.error(`Error applying for leave: ${error.message}`);
         },
       }
     );

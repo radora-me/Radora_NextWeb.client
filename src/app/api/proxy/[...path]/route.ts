@@ -47,7 +47,11 @@ async function proxyRequest(
   }
 
   try {
-    const backendRes = await fetch(url, { method, headers, body });
+    const backendRes = await fetch(url, { 
+      method, 
+      headers, 
+      body 
+    });
 
     // If the backend returns 401 (token expired), signal the client to refresh
     if (backendRes.status === 401) {
@@ -60,8 +64,19 @@ async function proxyRequest(
       return NextResponse.json(data, { status: backendRes.status });
     }
 
-    // Non-JSON (e.g., 204 No Content)
-    return new NextResponse(null, { status: backendRes.status });
+    // Forward non-JSON (like files, PDFs, images) along with their headers
+    const responseHeaders = new Headers();
+    backendRes.headers.forEach((value, key) => {
+      // Fetch automatically decodes the body, so forwarding content-encoding can break the stream
+      if (key.toLowerCase() !== 'content-encoding') {
+        responseHeaders.set(key, value);
+      }
+    });
+
+    return new NextResponse(backendRes.body, { 
+      status: backendRes.status,
+      headers: responseHeaders 
+    });
   } catch (err: any) {
     console.error(`[/api/proxy/${backendPath}] Error:`, err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

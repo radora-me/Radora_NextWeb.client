@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Bell, Search } from "lucide-react";
 import { useAuth } from "@/features/auth/context/auth-context";
 import { SidebarTrigger } from "@/components/ui/sidebar";
@@ -43,9 +43,22 @@ export function Topbar() {
   const breadcrumb = getBreadcrumb(pathname);
   const { user, logout } = useAuth();
 
+  const router = useRouter();
   const userName = user?.name || "User";
   const userIdentifier = user?.email || user?.rollNumber || "user@radora.com";
   const initials = userName.split(" ").filter(Boolean).slice(0, 2).map(p => p[0]).join("").toUpperCase() || "US";
+
+  const handleProfile = () => {
+    if (user?.role === "teacher") router.push("/teacher-profile");
+    else if (user?.role === "student") router.push("/student-profile");
+    else router.push("/dashboard");
+  };
+
+  const handleSettings = () => {
+    if (user?.role === "admin") router.push("/settings");
+    else if (user?.role === "teacher") router.push("/teacher-dashboard");
+    else router.push("/student-dashboard");
+  };
 
   return (
     <header className="flex h-14 items-center gap-3 border-b bg-background/95 backdrop-blur-sm px-4">
@@ -96,8 +109,12 @@ export function Topbar() {
               </DropdownMenuLabel>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="cursor-pointer">Profile</DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer">Settings</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer" onClick={handleProfile}>
+              Profile
+            </DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer" onClick={handleSettings}>
+              Settings
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem 
               className="text-red-600 cursor-pointer" 

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -64,7 +65,9 @@ export function RegisterPage() {
         body: JSON.stringify({ name: name.trim(), email: email.trim().toLowerCase(), password }),
       });
 
-      const data = await response.json();
+      const contentType = response.headers.get("content-type");
+      const isJson = contentType && contentType.includes("application/json");
+      const data = isJson ? await response.json() : { message: "Server returned an invalid response" };
 
       if (!response.ok) {
         throw new Error(data.error || data.message || "Registration failed.");
@@ -90,9 +93,9 @@ export function RegisterPage() {
         {/* Logo */}
         <div className="relative z-10 flex items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-xl shadow-indigo-500/20">
-            <GraduationCap className="h-6 w-6 text-white" />
+            <Image src="/logo/Next.png" alt="Logo" width={48} height={48} className="object-cover rounded-xl" />
           </div>
-          <span className="text-2xl font-bold tracking-tight text-white">Radora</span>
+          <span className="text-2xl font-bold tracking-tight text-white">Radora Next</span>
         </div>
 
         {/* Content */}
@@ -152,7 +155,7 @@ export function RegisterPage() {
           {/* Mobile Logo */}
           <div className="mb-8 flex items-center justify-center gap-3 lg:hidden">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-xl shadow-indigo-500/20">
-              <GraduationCap className="h-6 w-6 text-white" />
+              <Image src="/logo/Next.png" alt="Logo" width={48} height={48} className="object-cover" />
             </div>
             <span className="text-3xl font-bold tracking-tight text-slate-900">Radora</span>
           </div>

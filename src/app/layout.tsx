@@ -21,6 +21,7 @@ export const metadata: Metadata = {
 
 import { AuthProvider } from "@/features/auth/context/auth-context";
 import { QueryProvider } from "@/components/providers/query-provider";
+import { Toaster } from "sonner";
 
 export default function RootLayout({
   children,
@@ -38,6 +39,7 @@ export default function RootLayout({
             <TooltipProvider>{children}</TooltipProvider>
           </QueryProvider>
         </AuthProvider>
+        <Toaster position="top-right" richColors closeButton />
       </body>
     </html>
   );

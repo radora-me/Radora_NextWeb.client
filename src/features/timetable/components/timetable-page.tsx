@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, Fragment } from "react";
 import { motion } from "framer-motion";
 import { Calendar, Clock } from "lucide-react";
 
@@ -217,7 +217,7 @@ export function TimetablePage() {
                     const isLastRow = rowIdx === periodTimings.length - 1;
 
                     return (
-                      <>
+                      <Fragment key={`row-${period.period}`}>
                         {/* Period info cell */}
                         <div
                           key={`period-${period.period}`}
@@ -284,7 +284,7 @@ export function TimetablePage() {
                             </div>
                           );
                         })}
-                      </>
+                      </Fragment>
                     );
                   })}
                 </div>

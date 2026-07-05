@@ -43,12 +43,22 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify(payload),
     });
 
-    const data = await backendRes.json();
+    const contentType = backendRes.headers.get("content-type");
+    const isJson = contentType && contentType.includes("application/json");
+    const data = isJson ? await backendRes.json() : { message: "Server returned an invalid response" };
 
-    if (!backendRes.ok || !data.user || !data.accessToken) {
+    if (!backendRes.ok || (isJson && (!data.user || !data.accessToken))) {
       return NextResponse.json(
         { error: data.error || data.message || "Invalid credentials" },
         { status: backendRes.status || 401 }
+      );
+    }
+
+    // Enforce that the user's actual role matches the portal they are trying to log into
+    if (data.user.role.toLowerCase() !== roleType.toLowerCase()) {
+      return NextResponse.json(
+        { error: `Access denied. Please use the ${data.user.role.toLowerCase()} portal to login.` },
+        { status: 403 }
       );
     }
 
