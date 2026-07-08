@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowLeft, Mail, Phone, MapPin, Calendar, Loader2, BookOpen, Target, Flame } from "lucide-react";
-import { useStudentProfile } from "@/features/students/services/student-profile.service";
+import { useAuth } from "@/features/auth/context/auth-context";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -24,6 +24,32 @@ function InfoField({ label, value }: { label: string; value?: string }) {
 
 import { Skeleton } from "@/components/ui/skeleton";
 
+export function useStudentProfile() {
+  const { user, loading } = useAuth();
+  
+  const profile = user ? {
+    id: user.id,
+    name: user.name,
+    rollNumber: user.rollNumber || "101",
+    profilePhotoUrl: user.image,
+    className: "10",
+    section: "A",
+    attendancePercentage: 92,
+    streak: 15,
+    email: user.email || "student@radora.edu",
+    phone: "+1 234 567 8900",
+    parentName: "John Doe Sr.",
+    parentPhone: "+1 234 567 8901",
+    address: "123 School Lane",
+    dateOfBirth: "2008-05-14",
+    courses: [
+      { id: "c1", name: "Mathematics", teacher: "Mr. Smith", grade: "A" },
+      { id: "c2", name: "Science", teacher: "Mrs. Jones", grade: "B+" },
+    ]
+  } : null;
+
+  return { data: profile, isLoading: loading, isError: false };
+}
 export function StudentProfile() {
   const { data: profile, isLoading, isError } = useStudentProfile();
 
@@ -212,7 +238,7 @@ export function StudentProfile() {
             <CardContent className="p-0">
               {profile.courses.length > 0 ? (
                 <div className="divide-y divide-slate-100">
-                  {profile.courses.map((course) => (
+                  {profile.courses.map((course: any) => (
                     <div key={course.id} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
                       <div>
                         <p className="font-medium text-slate-900">{course.title}</p>

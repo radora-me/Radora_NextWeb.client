@@ -31,16 +31,6 @@ import { useAuth } from "@/features/auth/context/auth-context";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
-// Helper to convert File to Base64 (just for local storage mock preview)
-const fileToBase64 = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = (error) => reject(error);
-  });
-};
-
 interface LocalAttachment {
   name: string;
   size: number;

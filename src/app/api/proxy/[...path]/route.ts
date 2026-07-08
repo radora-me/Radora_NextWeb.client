@@ -15,8 +15,7 @@ type RouteContext = { params: Promise<{ path: string[] }> };
 
 async function proxyRequest(
   req: NextRequest,
-  context: RouteContext,
-  method: string
+  context: RouteContext
 ): Promise<NextResponse> {
   const accessToken = req.cookies.get("radora_access_token")?.value;
 
@@ -37,7 +36,7 @@ async function proxyRequest(
   };
 
   let body: BodyInit | null = null;
-  if (method !== "GET" && method !== "DELETE") {
+  if (req.method !== "GET" && req.method !== "DELETE") {
     try {
       const text = await req.text();
       if (text) body = text;
@@ -48,7 +47,7 @@ async function proxyRequest(
 
   try {
     const backendRes = await fetch(url, { 
-      method, 
+      method: req.method, 
       headers, 
       body 
     });
@@ -84,21 +83,21 @@ async function proxyRequest(
 }
 
 export async function GET(req: NextRequest, context: RouteContext) {
-  return proxyRequest(req, context, "GET");
+  return proxyRequest(req, context);
 }
 
 export async function POST(req: NextRequest, context: RouteContext) {
-  return proxyRequest(req, context, "POST");
+  return proxyRequest(req, context);
 }
 
 export async function PUT(req: NextRequest, context: RouteContext) {
-  return proxyRequest(req, context, "PUT");
+  return proxyRequest(req, context);
 }
 
 export async function PATCH(req: NextRequest, context: RouteContext) {
-  return proxyRequest(req, context, "PATCH");
+  return proxyRequest(req, context);
 }
 
 export async function DELETE(req: NextRequest, context: RouteContext) {
-  return proxyRequest(req, context, "DELETE");
+  return proxyRequest(req, context);
 }

@@ -49,11 +49,3 @@ export function useStudentHomework() {
     queryFn: () => fetchJsonWithAuth<StudentHomework[]>("/homework/student"),
   });
 }
-
-export function useStudentHomeworkDetail(homeworkId: string | null) {
-  return useQuery<StudentHomework>({
-    queryKey: ["student-homework-detail", homeworkId],
-    queryFn: () => fetchJsonWithAuth<StudentHomework>(`/homework/student/${homeworkId}`),
-    enabled: !!homeworkId,
-  });
-}

@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { UserRole } from "@/types";
+import { useQueryClient } from "@tanstack/react-query";
 
 const studentRoutePrefixes = [
   '/student-dashboard',
@@ -62,6 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
+  const queryClient = useQueryClient();
 
   // Client-side route protection (protects against browser back/forward cache)
   useEffect(() => {
@@ -163,6 +165,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // best-effort
     }
     setUser(null);
+    queryClient.clear(); // Wipe all cached data to prevent data leakage between accounts
     router.push("/login");
   };
 

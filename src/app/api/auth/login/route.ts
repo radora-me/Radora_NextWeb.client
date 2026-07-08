@@ -5,19 +5,6 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v
 // 7 days in seconds
 const TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60;
 
-function buildCookieString(
-  name: string,
-  value: string,
-  maxAge: number,
-  httpOnly: boolean
-): string {
-  let cookie = `${name}=${encodeURIComponent(value)}; Path=/; Max-Age=${maxAge}; SameSite=Lax`;
-  if (httpOnly) cookie += "; HttpOnly";
-  // Secure flag: only add in production so localhost dev still works
-  if (process.env.NODE_ENV === "production") cookie += "; Secure";
-  return cookie;
-}
-
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -74,35 +61,17 @@ export async function POST(req: NextRequest) {
 
     const response = NextResponse.json({ user: userProfile }, { status: 200 });
 
-    // Set tokens as HttpOnly — JavaScript on the page can NEVER read these
-    response.headers.append(
-      "Set-Cookie",
-      buildCookieString("radora_access_token", data.accessToken, TOKEN_TTL_SECONDS, true)
-    );
-    response.headers.append(
-      "Set-Cookie",
-      buildCookieString("radora_refresh_token", data.refreshToken, TOKEN_TTL_SECONDS, true)
-    );
+    const cookieOptions = {
+      path: "/",
+      maxAge: TOKEN_TTL_SECONDS,
+      sameSite: "lax" as const,
+      secure: process.env.NODE_ENV === "production",
+    };
 
-    // radora_role is non-sensitive (just "admin"/"teacher"/"student") and must be
-    // readable by the Edge middleware for RBAC routing, so it is NOT HttpOnly.
-    response.headers.append(
-      "Set-Cookie",
-      buildCookieString("radora_role", userProfile.role, TOKEN_TTL_SECONDS, false)
-    );
-
-    // radora_user_profile stores non-sensitive profile data (id, name, role, etc.) so that
-    // /api/auth/me can quickly hydrate the user state on page refresh without an extra
-    // backend round-trip. Contains NO secret tokens — safe to be non-HttpOnly.
-    response.headers.append(
-      "Set-Cookie",
-      buildCookieString(
-        "radora_user_profile",
-        JSON.stringify(userProfile),
-        TOKEN_TTL_SECONDS,
-        false // readable by server-side /api/auth/me route via req.cookies
-      )
-    );
+    response.cookies.set("radora_access_token", data.accessToken, { ...cookieOptions, httpOnly: true });
+    response.cookies.set("radora_refresh_token", data.refreshToken, { ...cookieOptions, httpOnly: true });
+    response.cookies.set("radora_role", userProfile.role, { ...cookieOptions, httpOnly: false });
+    response.cookies.set("radora_user_profile", JSON.stringify(userProfile), { ...cookieOptions, httpOnly: false });
 
     return response;
   } catch (err: any) {
