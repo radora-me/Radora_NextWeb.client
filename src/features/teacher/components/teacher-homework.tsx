@@ -33,8 +33,12 @@ import { useTeacherCourses } from "@/features/attendance/services";
 import { 
   useTeacherHomework, 
   useCreateHomework, 
-  useUpdateHomework, 
+  useUpdateHomework,
   useDeleteHomework,
+  useTeacherHomeworkDetail,
+  useReopenResubmission,
+  useTeacherSubmissions,
+  useGradeSubmission,
   HomeworkAssignment 
 } from "@/features/homework/services";
 import { useTeacherStudents } from "@/features/students/services";
@@ -67,6 +71,7 @@ export function TeacherHomework() {
   const [editingHomework, setEditingHomework] = useState<HomeworkAssignment | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [selectedHwForSubmissions, setSelectedHwForSubmissions] = useState<HomeworkAssignment | null>(null);
+  const [selectedHwDetail, setSelectedHwDetail] = useState<string | null>(null);
 
   // Form States (Create / Edit)
   const [title, setTitle] = useState("");
@@ -78,10 +83,6 @@ export function TeacherHomework() {
   const [attachments, setAttachments] = useState<AttachmentFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
 
-  // Mock Grading States (since backend has no submissions/grading endpoints yet)
-  const [mockSubmissions, setMockSubmissions] = useState<any[]>([]);
-  const [submissionCounts, setSubmissionCounts] = useState<Record<string, number>>({});
-
   const { data: courses, isLoading: coursesLoading } = useTeacherCourses();
   const { data: homeworks, isLoading: homeworksLoading, refetch } = useTeacherHomework();
   const { data: students } = useTeacherStudents();
@@ -89,87 +90,11 @@ export function TeacherHomework() {
   const { mutate: createHomework, isPending: isCreating } = useCreateHomework();
   const { mutate: updateHomework, isPending: isUpdating } = useUpdateHomework();
   const { mutate: deleteHomework, isPending: isDeleting } = useDeleteHomework();
-
-  // Load mock submissions from localStorage on selection
-  useEffect(() => {
-    if (selectedHwForSubmissions) {
-      const hwId = selectedHwForSubmissions.id;
-      // Fetch mock students or load existing ones
-      const localKey = `mock_submissions_${hwId}`;
-      const saved = localStorage.getItem(localKey);
-      
-      if (saved) {
-        // Filter out corrupted fallback mock students from previous bug (rollNumber "000")
-        const parsed = JSON.parse(saved).filter((m: any) => m.rollNumber !== "000");
-        
-        // Deduplicate by studentId to prevent React duplicate key errors
-        let uniqueMocks = parsed.reduce((acc: any[], current: any) => {
-          const x = acc.find(item => item.studentId === current.studentId);
-          if (!x) {
-            return acc.concat([current]);
-          } else {
-            // Keep the most recent submission if duplicates exist
-            return acc;
-          }
-        }, []);
-        
-        // Clean up any existing hardcoded demonstration submissions from previous loads
-        uniqueMocks = uniqueMocks.map((m: any) => {
-          if (m.textSubmission === "Mock submission for testing grading functionality.") {
-            return { ...m, status: "PENDING", submittedAt: null, textSubmission: null };
-          }
-          return m;
-        });
-        
-        setMockSubmissions(uniqueMocks);
-      } else {
-        // Generate initial mock submissions for this homework
-        let initialMocks: any[] = [];
-        if (students && students.length > 0) {
-          initialMocks = students.map((s, index) => ({
-            studentId: s.id,
-            name: s.name,
-            rollNumber: s.rollNumber,
-            status: "PENDING",
-            submittedAt: null,
-            textSubmission: null,
-            marks: null as number | null,
-            feedback: "",
-            attachments: [] as any[]
-          }));
-          
-          // We no longer artificially mock the first student, so all students start as PENDING.
-        } else {
-          initialMocks = [
-            { studentId: "std-1", name: "Amit Kumar", rollNumber: "101", status: "SUBMITTED", submittedAt: new Date(Date.now() - 3600000 * 4).toISOString(), textSubmission: "Please find my attached solutions for Chapter 3 exercises.", marks: null as number | null, feedback: "", attachments: [] as any[] },
-            { studentId: "std-2", name: "Priya Sharma", rollNumber: "105", status: "SUBMITTED", submittedAt: new Date(Date.now() - 3600000 * 24).toISOString(), textSubmission: "I have completed all the questions listed in the assignment.", marks: null as number | null, feedback: "", attachments: [] as any[] }
-          ];
-        }
-        
-        localStorage.setItem(localKey, JSON.stringify(initialMocks));
-        setMockSubmissions(initialMocks);
-      }
-    }
-  }, [selectedHwForSubmissions, students]);
-
-  // Load real submission counts from local storage mock data for accurate table display
-  useEffect(() => {
-    if (homeworks) {
-      const counts: Record<string, number> = {};
-      homeworks.forEach(hw => {
-        const saved = localStorage.getItem(`mock_submissions_${hw.id}`);
-        if (saved) {
-          try {
-            const parsed = JSON.parse(saved);
-            counts[hw.id] = parsed.filter((m: any) => m.status !== "PENDING").length;
-          } catch (e) {
-            console.error(e);
-          }
-        }
-      });
-      setSubmissionCounts(counts);
-    }
-  }, [homeworks, mockSubmissions]); // Re-run if mockSubmissions changes so counts update after grading
+  const { mutate: reopenResubmission, isPending: isReopening } = useReopenResubmission();
+  const { data: detailData, isLoading: detailLoading } = useTeacherHomeworkDetail(selectedHwDetail);
+  
+  const { data: submissionsData, isLoading: submissionsLoading, refetch: refetchSubmissions } = useTeacherSubmissions(selectedHwForSubmissions?.id || null);
+  const { mutate: gradeSubmission, isPending: isGrading } = useGradeSubmission();
 
   // Handle File Selection
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -292,24 +217,22 @@ export function TeacherHomework() {
     });
   };
 
-  // Grade Mock Submission
+  // Grade Submission
   const handleSaveGrade = (studentId: string, marks: number, feedback: string) => {
     if (!selectedHwForSubmissions) return;
-    const updated = mockSubmissions.map(sub => {
-      if (sub.studentId === studentId) {
-        return { ...sub, status: "GRADED", marks, feedback };
+    
+    gradeSubmission(
+      { homeworkId: selectedHwForSubmissions.id, studentId, marks, feedback },
+      {
+        onSuccess: () => {
+          toast.success("Submission graded successfully");
+          refetchSubmissions();
+        },
+        onError: (err: any) => {
+          toast.error("Failed to grade submission", { description: err.message });
+        }
       }
-      return sub;
-    });
-    
-    // Update local storage so it persists across refreshes
-    if (selectedHwForSubmissions) {
-      const localKey = `mock_submissions_${selectedHwForSubmissions.id}`;
-      localStorage.setItem(localKey, JSON.stringify(updated));
-    }
-    
-    setMockSubmissions(updated);
-    toast.success("Grade saved successfully!");
+    );
   };
 
   const handleMockDownload = (file: any) => {
@@ -404,7 +327,11 @@ export function TeacherHomework() {
                       </>
                     ) : homeworks && homeworks.length > 0 ? (
                       homeworks.map((hw) => (
-                        <TableRow key={hw.id} className="hover:bg-indigo-50/20 transition-colors">
+                        <TableRow 
+                          key={hw.id} 
+                          className="hover:bg-indigo-50/20 transition-colors cursor-pointer"
+                          onClick={() => setSelectedHwDetail(hw.id)}
+                        >
                           <TableCell className="font-medium text-slate-900 pl-6">
                             <div className="flex items-center gap-2.5">
                               <BookOpen className="w-4 h-4 text-indigo-500" />
@@ -420,15 +347,15 @@ export function TeacherHomework() {
                             <Button 
                               variant="ghost" 
                               size="sm" 
-                              onClick={() => setSelectedHwForSubmissions(hw)}
+                              onClick={(e) => { e.stopPropagation(); setSelectedHwForSubmissions(hw); }}
                               className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50/50 flex items-center gap-1.5 h-8 font-medium"
                             >
                               <ClipboardList className="w-4 h-4" />
-                              Grade ({hw.submissionsCount || submissionCounts[hw.id] || 0} submitted)
+                              Grade ({hw.submissionsCount || 0} submitted)
                             </Button>
                           </TableCell>
                           <TableCell className="text-right pr-6">
-                            <div className="flex justify-end gap-2">
+                            <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                               <Button variant="ghost" size="icon" onClick={() => startEdit(hw)} className="h-8 w-8 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50">
                                 <Edit className="w-4 h-4" />
                               </Button>
@@ -491,6 +418,14 @@ export function TeacherHomework() {
                             : `${c.title}${c.description ? ` — Section ${c.description}` : ""}`;
                           return <SelectItem key={c.id} value={c.id}>{label}</SelectItem>;
                         })}
+                        {courseId && editingHomework?.course?.id === courseId && (!courses || !courses.some(c => c.id === courseId)) && (
+                          <SelectItem key={courseId} value={courseId}>
+                            {/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(editingHomework.course.title?.trim() ?? "") 
+                              ? `Class${editingHomework.course.description ? ` — Section ${editingHomework.course.description}` : ""}`
+                              : `${editingHomework.course.title}${editingHomework.course.description ? ` — Section ${editingHomework.course.description}` : ""}`
+                            }
+                          </SelectItem>
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
@@ -772,78 +707,117 @@ export function TeacherHomework() {
                   Evaluating submissions for: <span className="font-semibold text-indigo-950">{selectedHwForSubmissions?.title}</span> ({selectedHwForSubmissions?.course.title})
                 </DialogDescription>
               </div>
+              
+              {selectedHwForSubmissions && (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50 shadow-sm"
+                  onClick={() => {
+                    reopenResubmission(selectedHwForSubmissions.id, {
+                      onSuccess: () => {
+                        toast.success("Homework reopened for resubmission");
+                        refetchSubmissions();
+                      }
+                    });
+                  }}
+                  disabled={isReopening}
+                >
+                  <AlertTriangle className="h-4 w-4 mr-1.5 text-amber-500" />
+                  Reopen Homework
+                </Button>
+              )}
             </div>
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto p-6 min-h-0">
-            <div className="space-y-6">
-              {mockSubmissions.map((sub) => {
-                const hasSubmission = sub.status !== "PENDING";
-                return (
-                  <div key={sub.studentId} className="border border-slate-100 rounded-xl bg-slate-50/50 hover:bg-white hover:shadow-sm transition-all p-5">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-full bg-indigo-50 text-indigo-700 font-bold flex items-center justify-center text-sm">
-                          {sub.name.charAt(0)}
+            {submissionsLoading ? (
+              <div className="py-10 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-indigo-600" /></div>
+            ) : (
+              <div className="space-y-6">
+                {submissionsData?.students.map((row) => {
+                  const sub = row.submission;
+                  const hasSubmission = row.hasSubmission && sub;
+                  return (
+                    <div key={row.student.id} className="border border-slate-100 rounded-xl bg-slate-50/50 hover:bg-white hover:shadow-sm transition-all p-5">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="h-9 w-9 rounded-full bg-indigo-50 text-indigo-700 font-bold flex items-center justify-center text-sm">
+                            {row.student.name.charAt(0)}
+                          </div>
+                          <div>
+                            <h4 className="font-semibold text-slate-900 text-sm">{row.student.name}</h4>
+                            <p className="text-xs text-slate-500">Roll Number: {row.student.rollNumber}</p>
+                          </div>
                         </div>
-                        <div>
-                          <h4 className="font-semibold text-slate-900 text-sm">{sub.name}</h4>
-                          <p className="text-xs text-slate-500">Roll Number: {sub.rollNumber}</p>
+
+                        <div className="flex items-center gap-2">
+                          {row.status === "GRADED" ? (
+                            <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">
+                              Graded: {sub?.marks}/{selectedHwForSubmissions?.totalMarks || 100}
+                            </Badge>
+                          ) : row.status === "SUBMITTED" ? (
+                            <Badge className="bg-blue-100 text-blue-700 border-blue-200">
+                              Submitted
+                            </Badge>
+                          ) : row.status === "LATE" ? (
+                            <Badge className="bg-orange-100 text-orange-700 border-orange-200">
+                              Late
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-amber-100 text-amber-700 border-amber-200">
+                              Pending
+                            </Badge>
+                          )}
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        {sub.status === "GRADED" ? (
-                          <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">
-                            Graded: {sub.marks}/{selectedHwForSubmissions?.totalMarks || 100}
-                          </Badge>
-                        ) : sub.status === "SUBMITTED" ? (
-                          <Badge className="bg-blue-100 text-blue-700 border-blue-200">
-                            Submitted
-                          </Badge>
-                        ) : (
-                          <Badge className="bg-amber-100 text-amber-700 border-amber-200">
-                            Pending
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
+                      {hasSubmission && sub ? (
+                        <div className="space-y-4">
+                          {/* Student text submission */}
+                          <div className="bg-white border border-slate-100 rounded-lg p-3.5 text-sm text-slate-700">
+                            <p className="font-semibold text-xs text-slate-400 mb-1">STUDENT SUBMISSION NOTE:</p>
+                            {sub.textSubmission}
+                          </div>
 
-                    {hasSubmission ? (
-                      <div className="space-y-4">
-                        {/* Student text submission */}
-                        <div className="bg-white border border-slate-100 rounded-lg p-3.5 text-sm text-slate-700">
-                          <p className="font-semibold text-xs text-slate-400 mb-1">STUDENT SUBMISSION NOTE:</p>
-                          {sub.textSubmission}
-                        </div>
-
-                        {/* Student attachments */}
-                        {sub.attachments && sub.attachments.length > 0 && (
+                          {/* Student attachments */}
+                          {sub.attachments && sub.attachments.length > 0 && (
                           <div className="space-y-1.5">
                             <p className="font-semibold text-xs text-slate-400">STUDENT ATTACHMENTS:</p>
                             {sub.attachments.map((file: any, idx: number) => (
                               <div key={idx} className="flex items-center justify-between p-2 bg-white border border-slate-100 rounded-lg text-xs max-w-md">
                                 <div className="flex items-center gap-2 truncate">
                                   <FileText className="h-4 w-4 text-indigo-500 shrink-0" />
-                                  <span className="font-medium text-slate-700 truncate">{file.name}</span>
+                                  <span className="font-medium text-slate-700 truncate">{file.fileName}</span>
                                 </div>
-                                <Button onClick={() => handleMockDownload(file)} size="icon" variant="ghost" className="h-7 w-7 text-indigo-600 hover:bg-indigo-50">
-                                  <Download className="h-3.5 w-3.5" />
-                                </Button>
+                                <a href={file.publicUrl} target="_blank" rel="noopener noreferrer">
+                                  <Button size="icon" variant="ghost" className="h-7 w-7 text-indigo-600 hover:bg-indigo-50">
+                                    <Download className="h-3.5 w-3.5" />
+                                  </Button>
+                                </a>
                               </div>
                             ))}
                           </div>
                         )}
 
-                        {/* Grading Form */}
-                        <div className="border-t border-slate-100 pt-4 mt-2">
-                          <GradingForm 
-                            maxMarks={selectedHwForSubmissions?.totalMarks || 100} 
-                            initialMarks={sub.marks}
-                            initialFeedback={sub.feedback}
-                            onSave={(marks, feedback) => handleSaveGrade(sub.studentId, marks, feedback)}
-                          />
-                        </div>
+                        {/* Grading Form or Static Display */}
+                        {row.status === "GRADED" ? (
+                          <div className="border-t border-slate-100 pt-4 mt-2">
+                            <span className="text-xs font-semibold text-slate-700 uppercase tracking-wider block mb-1">Teacher Feedback</span>
+                            <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3.5 text-sm text-emerald-800 font-medium">
+                              {sub.feedback ? sub.feedback : <span className="italic text-emerald-600/70">No specific feedback provided.</span>}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="border-t border-slate-100 pt-4 mt-2">
+                            <GradingForm 
+                              maxMarks={selectedHwForSubmissions?.totalMarks || 100} 
+                              initialMarks={sub.marks}
+                              initialFeedback={sub.feedback || ""}
+                              onSave={(marks, feedback) => handleSaveGrade(row.student.id, marks, feedback)}
+                            />
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <p className="text-xs text-slate-400 italic">No submission received yet.</p>
@@ -852,7 +826,51 @@ export function TeacherHomework() {
                 );
               })}
             </div>
+            )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Detail Dialog */}
+      <Dialog open={!!selectedHwDetail} onOpenChange={(open) => !open && setSelectedHwDetail(null)}>
+        <DialogContent className="max-w-2xl bg-white">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <BookOpen className="w-5 h-5 text-indigo-600" />
+              Assignment Details
+            </DialogTitle>
+          </DialogHeader>
+          
+          {detailLoading ? (
+            <div className="py-10 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-indigo-600" /></div>
+          ) : detailData ? (
+            <div className="space-y-6 pt-4">
+              <div>
+                <h2 className="text-xl font-bold text-slate-900">{detailData.title}</h2>
+                <div className="flex items-center gap-4 mt-2 text-sm text-slate-500">
+                  <span className="flex items-center gap-1.5"><Calendar className="w-4 h-4" /> Due: {detailData.dueAt ? new Date(detailData.dueAt).toLocaleDateString() : 'No date'}</span>
+                  <span className="flex items-center gap-1.5"><GraduationCap className="w-4 h-4" /> Max Marks: {detailData.totalMarks || 100}</span>
+                </div>
+              </div>
+              
+              {detailData.description && (
+                <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 text-slate-700 text-sm whitespace-pre-wrap">
+                  {detailData.description}
+                </div>
+              )}
+              
+              {detailData.instructions && (
+                <div className="space-y-2">
+                  <h4 className="font-semibold text-slate-900 text-sm">Instructions</h4>
+                  <div className="text-sm text-slate-600 whitespace-pre-wrap leading-relaxed">
+                    {detailData.instructions}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="py-10 text-center text-slate-500">Assignment not found</div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

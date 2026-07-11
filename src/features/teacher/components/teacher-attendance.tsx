@@ -20,8 +20,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CheckCircle, XCircle, Clock, Calendar, Users, Save, Loader2 } from "lucide-react";
-import { useTeacherCourses, useCourseAttendance, useSubmitAttendance, StudentAttendanceRecord } from "@/features/attendance/services";
+import { CheckCircle, XCircle, Clock, Calendar, Users, Save, Loader2, PartyPopper, History, TrendingUp } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { useTeacherCourses, useCourseAttendance, useSubmitAttendance, useUpdateStudentAttendance, useTeacherHolidays, useStudentAttendanceHistory, StudentAttendanceRecord } from "@/features/attendance/services";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
@@ -49,6 +52,8 @@ export function TeacherAttendance() {
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
   const [dateStr, setDateStr] = useState(new Date().toISOString().split("T")[0]);
   const [localAttendance, setLocalAttendance] = useState<StudentAttendanceRecord[]>([]);
+  const [savingStudentId, setSavingStudentId] = useState<string | null>(null);
+  const [historyStudent, setHistoryStudent] = useState<{ rollNumber: string; name: string } | null>(null);
 
   // 1. Fetch Teacher Courses for Dropdown
   const { data: courses, isLoading: coursesLoading } = useTeacherCourses();
@@ -75,6 +80,31 @@ export function TeacherAttendance() {
   }, [attendanceData]);
 
   const { mutate: submitAttendance, isPending: isSubmitting } = useSubmitAttendance();
+  const { mutateAsync: updateStudentAttendance } = useUpdateStudentAttendance();
+  const { data: holidays } = useTeacherHolidays();
+  const { data: attendanceHistory, isLoading: historyLoading } = useStudentAttendanceHistory(
+    selectedCourseId,
+    historyStudent?.rollNumber ?? null
+  );
+
+  const handleSingleSave = async (student: StudentAttendanceRecord) => {
+    if (!selectedCourseId) return;
+    setSavingStudentId(student.studentId);
+    try {
+      await updateStudentAttendance({
+        courseId: selectedCourseId,
+        rollNumber: student.rollNumber,
+        status: student.status as "PRESENT" | "ABSENT" | "LATE",
+        date: dateStr,
+      });
+      toast.success(`${student.name}'s attendance updated to ${student.status}.`);
+      refetchAttendance();
+    } catch (err: any) {
+      toast.error(`Failed to update: ${err.message}`);
+    } finally {
+      setSavingStudentId(null);
+    }
+  };
 
   const handleStatusChange = (studentId: string, newStatus: AttendanceStatus) => {
     setLocalAttendance((prev) =>
@@ -168,6 +198,18 @@ export function TeacherAttendance() {
         </motion.div>
 
         <motion.div variants={itemVariants} className="bg-white dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+          {/* Holidays banner */}
+          {holidays && holidays.length > 0 && (
+            <div className="px-4 py-2.5 bg-amber-50 border-b border-amber-100 flex items-center gap-2 flex-wrap">
+              <PartyPopper className="w-4 h-4 text-amber-500 shrink-0" />
+              <span className="text-xs font-semibold text-amber-700">Upcoming Holidays:</span>
+              {holidays.slice(0, 4).map((h) => (
+                <Badge key={h.id} variant="outline" className="text-[11px] bg-amber-100 text-amber-800 border-amber-200">
+                  {h.title} · {new Date(h.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                </Badge>
+              ))}
+            </div>
+          )}
           <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center bg-zinc-50/50 dark:bg-zinc-900/50">
             <h3 className="font-semibold text-zinc-900 dark:text-white flex items-center gap-2">
               Student List
@@ -208,7 +250,11 @@ export function TeacherAttendance() {
                   </>
                 ) : localAttendance.length > 0 ? (
                   localAttendance.map((student) => (
-                    <TableRow key={student.studentId}>
+                    <TableRow
+                      key={student.studentId}
+                      className="cursor-pointer"
+                      onClick={() => setHistoryStudent({ rollNumber: student.rollNumber, name: student.name })}
+                    >
                       <TableCell className="font-medium text-zinc-500">{student.rollNumber}</TableCell>
                       <TableCell className="font-medium">
                         {student.name}
@@ -250,6 +296,22 @@ export function TeacherAttendance() {
                             <Clock className="w-4 h-4 mr-1.5" />
                             Late
                           </Button>
+                          {student.isMarked && student.canEdit && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleSingleSave(student)}
+                              disabled={savingStudentId === student.studentId}
+                              className="border-indigo-200 text-indigo-600 hover:bg-indigo-50 ml-1"
+                            >
+                              {savingStudentId === student.studentId ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <Save className="w-3.5 h-3.5" />
+                              )}
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -282,6 +344,58 @@ export function TeacherAttendance() {
           </Button>
         </motion.div>
       </motion.div>
+
+      {/* Student Attendance History Modal */}
+      <Dialog open={!!historyStudent} onOpenChange={(open) => !open && setHistoryStudent(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <History className="h-5 w-5 text-indigo-500" />
+              {historyStudent?.name} — Attendance History
+            </DialogTitle>
+          </DialogHeader>
+          {historyLoading ? (
+            <div className="flex items-center justify-center py-10">
+              <Loader2 className="h-6 w-6 animate-spin text-indigo-500" />
+            </div>
+          ) : attendanceHistory ? (
+            <div className="space-y-4">
+              {/* Summary cards */}
+              <div className="grid grid-cols-4 gap-2">
+                {[
+                  { label: "Present", value: attendanceHistory.summary.present, cls: "bg-emerald-50 text-emerald-700" },
+                  { label: "Absent", value: attendanceHistory.summary.absent, cls: "bg-rose-50 text-rose-700" },
+                  { label: "Late", value: attendanceHistory.summary.late, cls: "bg-amber-50 text-amber-700" },
+                  { label: "Rate", value: `${attendanceHistory.summary.percentage}%`, cls: "bg-indigo-50 text-indigo-700" },
+                ].map((s) => (
+                  <Card key={s.label} className={`p-3 text-center border-0 ${s.cls}`}>
+                    <p className="text-lg font-bold">{s.value}</p>
+                    <p className="text-xs font-medium">{s.label}</p>
+                  </Card>
+                ))}
+              </div>
+              {/* Records list */}
+              <div className="max-h-72 overflow-y-auto space-y-1.5 pr-1">
+                {attendanceHistory.records.map((r, i) => (
+                  <div key={i} className="flex items-center justify-between text-sm px-3 py-2 rounded-lg bg-zinc-50 border border-zinc-100">
+                    <span className="text-zinc-600">{new Date(r.date).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })}</span>
+                    <Badge variant="outline" className={
+                      r.status === "PRESENT" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
+                      r.status === "ABSENT" ? "bg-rose-50 text-rose-700 border-rose-200" :
+                      r.status === "LATE" ? "bg-amber-50 text-amber-700 border-amber-200" :
+                      "bg-zinc-100 text-zinc-600"
+                    }>
+                      {r.status}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p className="text-center text-zinc-500 py-8 text-sm">No attendance records found for this student.</p>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

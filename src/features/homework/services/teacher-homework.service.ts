@@ -12,7 +12,7 @@ export interface HomeworkAssignment {
   status: "PUBLISHED" | "DRAFT";
   createdAt: string;
   updatedAt: string;
-  course: { id: string; title: string };
+  course: { id: string; title: string; description?: string | null; };
   submissionsCount: number;
   gradedCount: number;
 }
@@ -94,3 +94,81 @@ export function useDeleteHomework() {
   });
 }
 
+export function useTeacherHomeworkDetail(homeworkId: string | null) {
+  return useQuery<HomeworkAssignment>({
+    queryKey: ["teacher-homework-detail", homeworkId],
+    queryFn: () => fetchJsonWithAuth<HomeworkAssignment>(`/homework/teacher/${homeworkId}`),
+    enabled: !!homeworkId,
+  });
+}
+
+export function useReopenResubmission() {
+  return useMutation({
+    mutationFn: async (homeworkId: string) => {
+      const res = await fetchWithAuth(`/homework/teacher/${homeworkId}/resubmissions/reopen`, {
+        method: "POST",
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || result.message || "Failed to reopen");
+      return result;
+    },
+  });
+}
+
+export interface TeacherSubmissionData {
+  homework: HomeworkAssignment;
+  totalStudents: number;
+  submittedCount: number;
+  gradedCount: number;
+  pendingCount: number;
+  students: {
+    student: {
+      id: string;
+      name: string;
+      rollNumber: string;
+      className: string | null;
+      profilePhotoUrl: string | null;
+    };
+    status: "PENDING" | "SUBMITTED" | "LATE" | "GRADED";
+    hasSubmission: boolean;
+    submission: {
+      id: string;
+      studentId: string;
+      textSubmission: string | null;
+      submittedAt: string;
+      status: "PENDING" | "SUBMITTED" | "LATE" | "GRADED";
+      marks: number | null;
+      feedback: string | null;
+      gradedAt: string | null;
+      attachments: {
+        id: string;
+        fileName: string;
+        mimeType: string;
+        size: number;
+        publicUrl: string;
+      }[];
+    } | null;
+  }[];
+}
+
+export function useTeacherSubmissions(homeworkId: string | null) {
+  return useQuery<TeacherSubmissionData>({
+    queryKey: ["teacher-submissions", homeworkId],
+    queryFn: () => fetchJsonWithAuth<TeacherSubmissionData>(`/homework/teacher/${homeworkId}/submissions`),
+    enabled: !!homeworkId,
+  });
+}
+
+export function useGradeSubmission() {
+  return useMutation({
+    mutationFn: async ({ homeworkId, studentId, marks, feedback }: { homeworkId: string, studentId: string, marks: number, feedback: string }) => {
+      const res = await fetchWithAuth(`/homework/teacher/${homeworkId}/submissions/${studentId}/grade`, {
+        method: "POST",
+        body: JSON.stringify({ marks, feedback }),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || result.message || "Failed to grade");
+      return result;
+    },
+  });
+}

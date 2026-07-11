@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowLeft, Mail, Phone, MapPin, Calendar, Loader2, BookOpen, Target, Flame } from "lucide-react";
-import { useAuth } from "@/features/auth/context/auth-context";
+import { useQuery } from "@tanstack/react-query";
+import { fetchJsonWithAuth } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -24,31 +25,29 @@ function InfoField({ label, value }: { label: string; value?: string }) {
 
 import { Skeleton } from "@/components/ui/skeleton";
 
-export function useStudentProfile() {
-  const { user, loading } = useAuth();
-  
-  const profile = user ? {
-    id: user.id,
-    name: user.name,
-    rollNumber: user.rollNumber || "101",
-    profilePhotoUrl: user.image,
-    className: "10",
-    section: "A",
-    attendancePercentage: 92,
-    streak: 15,
-    email: user.email || "student@radora.edu",
-    phone: "+1 234 567 8900",
-    parentName: "John Doe Sr.",
-    parentPhone: "+1 234 567 8901",
-    address: "123 School Lane",
-    dateOfBirth: "2008-05-14",
-    courses: [
-      { id: "c1", name: "Mathematics", teacher: "Mr. Smith", grade: "A" },
-      { id: "c2", name: "Science", teacher: "Mrs. Jones", grade: "B+" },
-    ]
-  } : null;
+interface StudentCourse {
+  id: string;
+  title: string;
+  description: string;
+}
 
-  return { data: profile, isLoading: loading, isError: false };
+interface StudentProfileData {
+  id: string;
+  name: string;
+  rollNumber: string;
+  className: string;
+  section: string;
+  profilePhotoUrl: string | null;
+  attendancePercentage: number;
+  streak: number;
+  courses: StudentCourse[];
+}
+
+export function useStudentProfile() {
+  return useQuery<StudentProfileData>({
+    queryKey: ["student-profile"],
+    queryFn: () => fetchJsonWithAuth<StudentProfileData>("/student/profile"),
+  });
 }
 export function StudentProfile() {
   const { data: profile, isLoading, isError } = useStudentProfile();
