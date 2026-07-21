@@ -1,15 +1,4 @@
-export interface Notification {
-  id: string;
-  title: string;
-  message: string;
-  type: "announcement" | "alert" | "reminder" | "message";
-  sender: string;
-  recipients: string;
-  date: string;
-  read: boolean;
-  priority: "high" | "medium" | "low";
-}
-
+import { Notification } from "@/types/api.types";
 export const mockNotifications: Notification[] = [
   { id: "N001", title: "Mid-Term Exam Schedule Released", message: "The mid-term examination schedule for Classes 6-12 has been finalized. Examinations will commence from June 20, 2026. Please ensure all students are informed and prepared.", type: "announcement", sender: "Admin", recipients: "All Students & Parents", date: "2026-06-10T09:00:00", read: false, priority: "high" },
   { id: "N002", title: "Fee Payment Reminder — Q2", message: "This is a reminder that Q2 fee payments are due by June 30, 2026. Late payments will incur a 5% surcharge. Please clear all pending dues at the earliest.", type: "reminder", sender: "Admin", recipients: "Parents with Pending Fees", date: "2026-06-09T14:30:00", read: false, priority: "high" },

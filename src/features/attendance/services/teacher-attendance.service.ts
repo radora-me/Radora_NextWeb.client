@@ -1,22 +1,10 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { fetchJsonWithAuth, fetchWithAuth } from "@/lib/api-client";
-
-export interface TeacherAttendanceCourse {
-  id: string;
-  title: string;
-  description: string; // section e.g. "A"
-  _count: { enrollments: number };
-}
-
-export interface StudentAttendanceRecord {
-  studentId: string;
-  name: string;
-  rollNumber: string;
-  status: "PRESENT" | "ABSENT" | "LATE" | "HALF_DAY";
-  isMarked: boolean;
-  canEdit: boolean;
-  createdAt: string | null;
-}
+import { TeacherAttendanceCourse } from "@/types/api.types";
+import { StudentAttendanceRecord } from "@/types/api.types";
+import { AttendanceHoliday } from "@/types/api.types";
+import { StudentAttendanceHistory } from "@/types/api.types";
+import { CourseStudent } from "@/types/api.types";
 
 export function useTeacherCourses() {
   return useQuery<TeacherAttendanceCourse[]>({
@@ -55,6 +43,28 @@ export function useSubmitAttendance() {
   });
 }
 
+export function useSubmitSubjectAttendance() {
+  return useMutation({
+    mutationFn: async (data: {
+      courseId: string;
+      date: string;
+      subjectName: string;
+      students: { studentId: string; status: string }[];
+    }) => {
+      const response = await fetchWithAuth("/teacher/attendance/subject-wise", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || result.message || "Failed to submit subject attendance");
+      }
+      return result;
+    },
+  });
+}
+
 export function useUpdateStudentAttendance() {
   return useMutation({
     mutationFn: async (data: {
@@ -77,35 +87,12 @@ export function useUpdateStudentAttendance() {
   });
 }
 
-export interface Holiday {
-  id: string;
-  title: string;
-  date: string;
-}
-
 export function useTeacherHolidays() {
-  return useQuery<Holiday[]>({
+  return useQuery<AttendanceHoliday[]>({
     queryKey: ["teacher-holidays"],
-    queryFn: () => fetchJsonWithAuth<Holiday[]>("/teacher/attendance/holidays"),
+    queryFn: () => fetchJsonWithAuth<AttendanceHoliday[]>("/teacher/attendance/holidays"),
     staleTime: 5 * 60 * 1000, // 5 min — holidays rarely change
   });
-}
-
-export interface StudentAttendanceHistory {
-  rollNumber: string;
-  name: string;
-  records: {
-    date: string;
-    status: "PRESENT" | "ABSENT" | "LATE" | "HALF_DAY";
-    markedBy: string | null;
-  }[];
-  summary: {
-    total: number;
-    present: number;
-    absent: number;
-    late: number;
-    percentage: number;
-  };
 }
 
 export function useStudentAttendanceHistory(
@@ -143,13 +130,6 @@ export function useStudentAttendanceHistory(
     },
     enabled: !!courseId && !!rollNumber,
   });
-}
-
-export interface CourseStudent {
-  id: string;
-  name: string;
-  rollNumber: string;
-  profilePhotoUrl: string | null;
 }
 
 export function useCourseStudents(courseId: string | null) {

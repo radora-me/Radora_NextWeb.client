@@ -1,21 +1,5 @@
-export interface TimetableSlot {
-  id: string;
-  day: string;
-  period: number;
-  startTime: string;
-  endTime: string;
-  subject: string;
-  teacher: string;
-  room: string;
-  type: "lecture" | "lab" | "break" | "assembly" | "sports" | "library";
-}
-
-export interface ClassTimetable {
-  class: string;
-  section: string;
-  slots: TimetableSlot[];
-}
-
+import { TimetableSlot } from "@/types/api.types";
+import { ClassTimetable } from "@/types/api.types";
 const periods = [
   { period: 1, startTime: "08:00", endTime: "08:45" },
   { period: 2, startTime: "08:45", endTime: "09:30" },

@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { UserRole } from "@/types";
 import { useQueryClient } from "@tanstack/react-query";
+import { User } from "@/types/api.types";
 
 const studentRoutePrefixes = [
   '/student-dashboard',
@@ -11,6 +12,8 @@ const studentRoutePrefixes = [
   '/student-timetable',
   '/student-ai-chat',
   '/student-classroom-chat',
+  '/student-homework',
+  '/student-notifications',
 ];
 
 const teacherRoutePrefixes = [
@@ -19,6 +22,8 @@ const teacherRoutePrefixes = [
   '/teacher-attendance',
   '/teacher-homework',
   '/teacher-chat',
+  '/teacher-profile',
+  '/teacher-notifications',
 ];
 
 const adminRoutePrefixes = [
@@ -27,22 +32,16 @@ const adminRoutePrefixes = [
   '/timetable',
   '/exams',
   '/fees',
-  '/notifications',
-  '/settings',
   '/students',
   '/teachers',
+  '/notifications',
+];
+
+const sharedRoutePrefixes = [
+  '/settings',
 ];
 
 const authRoutePrefixes = ['/login', '/register'];
-
-export interface User {
-  id: string;
-  name: string;
-  email?: string | null;
-  rollNumber?: string | null;
-  role: UserRole;
-  image?: string | null;
-}
 
 interface AuthContextType {
   user: User | null;
@@ -73,13 +72,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const isStudentRoute = studentRoutePrefixes.some(p => pathname.startsWith(p));
     const isTeacherRoute = teacherRoutePrefixes.some(p => pathname.startsWith(p));
     const isAdminRoute = adminRoutePrefixes.some(p => pathname.startsWith(p));
+    const isSharedRoute = sharedRoutePrefixes.some(p => pathname.startsWith(p));
 
-    if (!user && (isStudentRoute || isTeacherRoute || isAdminRoute)) {
+    if (!user && (isStudentRoute || isTeacherRoute || isAdminRoute || isSharedRoute)) {
       router.push(`/login?callbackUrl=${encodeURIComponent(pathname)}`);
       return;
     }
 
     if (user) {
+      if (isSharedRoute) {
+        // Allow all logged-in users to access shared routes
+        return;
+      }
+      
       if (user.role === 'student' && (isAdminRoute || isTeacherRoute)) {
         router.push('/student-dashboard');
       } else if (user.role === 'teacher' && (isAdminRoute || isStudentRoute)) {

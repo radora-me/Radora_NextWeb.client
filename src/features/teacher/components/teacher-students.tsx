@@ -43,25 +43,31 @@ const AddStudentModal = dynamic(
   }
 );
 
+import { TeacherStudentProfileModal } from "./teacher-student-profile-modal";
+
 export function TeacherStudents() {
   const [searchQuery, setSearchQuery] = useState("");
   const [classFilter, setClassFilter] = useState("all");
   const [showAddModal, setShowAddModal] = useState(false);
 
-  const { data: students, isLoading, isError, refetch } = useTeacherStudents();
+  // Profile Modal State
+  const [selectedStudentRoll, setSelectedStudentRoll] = useState<string | null>(null);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+
+  const { data: students, isLoading, isError, error, refetch } = useTeacherStudents();
 
   // Extract unique classes for the filter dropdown
   const uniqueClasses =
-    Array.from(new Set(students?.map((s) => {
+    Array.isArray(students) ? Array.from(new Set(students.map((s) => {
       // Prefer className field, fall back to first enrolled course title
       return s.className || s.courses?.[0]?.title || null;
-    }).filter(Boolean))) || [];
+    }).filter(Boolean))) : [];
 
   const filteredStudents =
-    students?.filter((student) => {
+    (Array.isArray(students) ? students : []).filter((student) => {
       const matchesSearch =
-        student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        student.rollNumber.toLowerCase().includes(searchQuery.toLowerCase());
+        (student.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (student.rollNumber || "").toLowerCase().includes(searchQuery.toLowerCase());
       const displayClass = student.className || student.courses?.[0]?.title || "";
       const matchesClass =
         classFilter === "all" || displayClass === classFilter;
@@ -221,7 +227,7 @@ export function TeacherStudents() {
                     <TableRow>
                       <TableCell colSpan={5} className="h-32 text-center">
                         <div className="flex flex-col items-center justify-center text-red-500 bg-red-50 p-4 rounded-lg mx-4">
-                          <p className="font-medium">Failed to load students.</p>
+                          <p className="font-medium">{error instanceof Error ? error.message : "Failed to load students."}</p>
                           <p className="text-sm">Please ensure you are connected to the network.</p>
                           <Button
                             variant="outline"
@@ -272,6 +278,10 @@ export function TeacherStudents() {
                               variant="ghost"
                               size="sm"
                               className="h-8 px-2 text-slate-600 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400"
+                              onClick={() => {
+                                setSelectedStudentRoll(student.rollNumber);
+                                setShowProfileModal(true);
+                              }}
                             >
                               <Eye className="h-4 w-4 mr-1.5" />
                               <span className="hidden sm:inline">Profile</span>
@@ -329,6 +339,14 @@ export function TeacherStudents() {
           </CardContent>
         </Card>
       </motion.div>
+      <TeacherStudentProfileModal
+        rollNumber={selectedStudentRoll}
+        open={showProfileModal}
+        onOpenChange={(open) => {
+          setShowProfileModal(open);
+          if (!open) setSelectedStudentRoll(null);
+        }}
+      />
     </>
   );
 }

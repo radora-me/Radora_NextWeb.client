@@ -12,6 +12,7 @@ import {
   MessageSquare,
   LogOut,
   Settings,
+  Bell,
 } from "lucide-react";
 import { useAuth } from "@/features/auth/context/auth-context";
 import {
@@ -34,6 +35,7 @@ const navigation = [
   { name: "Attendance", href: "/teacher-attendance", icon: CalendarCheck },
   { name: "Homework & Grades", href: "/teacher-homework", icon: BookOpen },
   { name: "Classroom Chat", href: "/teacher-chat", icon: MessageSquare },
+  { name: "Notice Board", href: "/teacher-notifications", icon: Bell },
 ];
 
 export function TeacherSidebar() {
@@ -99,16 +101,7 @@ export function TeacherSidebar() {
       <SidebarFooter className="p-3">
         <SidebarSeparator className="bg-sidebar-border mb-2" />
         <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              render={<Link href="/settings" />}
-              tooltip="Settings"
-              className="h-9 transition-colors"
-            >
-              <Settings className="h-4 w-4" />
-              <span>Settings</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
+
           <SidebarMenuItem>
             <SidebarMenuButton
               render={<button type="button" suppressHydrationWarning />}

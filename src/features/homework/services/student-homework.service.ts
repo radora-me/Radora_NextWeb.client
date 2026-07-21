@@ -1,54 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchJsonWithAuth, fetchWithAuth } from "@/lib/api-client";
-
-export interface StudentHomework {
-  id: string;
-  title: string;
-  description: string | null;
-  instructions: string | null;
-  dueAt: string | null;
-  allowLateSubmission: boolean;
-  totalMarks: number | null;
-  status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
-  createdAt: string;
-  updatedAt: string;
-  teacher: {
-    id: string;
-    name: string;
-    email: string | null;
-  };
-  course: {
-    id: string;
-    title: string;
-    description: string | null;
-  };
-  attachments: {
-    id: string;
-    fileName: string;
-    mimeType: string;
-    size: number;
-    publicUrl: string;
-    downloadUrl: string;
-  }[];
-  canSubmit: boolean;
-  canResubmit: boolean;
-  mySubmission: {
-    id: string;
-    studentId: string;
-    submittedAt: string;
-    status: "PENDING" | "SUBMITTED" | "LATE" | "GRADED";
-    marks: number | null;
-    feedback: string | null;
-    gradedAt: string | null;
-    attachments: {
-      id: string;
-      fileName: string;
-      mimeType: string;
-      size: number;
-      publicUrl: string;
-    }[];
-  } | null;
-}
+import { StudentHomework } from "@/types/api.types";
+import { StudentSubmission } from "@/types/api.types";
+import { SubmitHomeworkPayload } from "@/types/api.types";
 
 export function useStudentHomework() {
   return useQuery<StudentHomework[]>({
@@ -65,23 +19,6 @@ export function useStudentHomeworkDetail(homeworkId: string | null) {
   });
 }
 
-export interface StudentSubmission {
-  id: string;
-  studentId: string;
-  submittedAt: string | null;
-  status: "PENDING" | "SUBMITTED" | "LATE" | "GRADED";
-  marks: number | null;
-  feedback: string | null;
-  gradedAt: string | null;
-  attachments: {
-    id: string;
-    fileName: string;
-    mimeType: string;
-    size: number;
-    publicUrl: string;
-  }[];
-}
-
 export function useStudentSubmission(homeworkId: string | null) {
   return useQuery<StudentSubmission>({
     queryKey: ["student-submission", homeworkId],
@@ -89,15 +26,6 @@ export function useStudentSubmission(homeworkId: string | null) {
     enabled: !!homeworkId,
     retry: false,
   });
-}
-
-export interface SubmitHomeworkPayload {
-  textSubmission?: string;
-  attachments?: {
-    fileName: string;
-    mimeType: string;
-    base64: string;
-  }[];
 }
 
 export function useSubmitHomework() {

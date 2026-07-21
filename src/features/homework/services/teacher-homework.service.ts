@@ -1,21 +1,7 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { fetchJsonWithAuth, fetchWithAuth } from "@/lib/api-client";
-
-export interface HomeworkAssignment {
-  id: string;
-  title: string;
-  description: string;
-  instructions: string;
-  dueAt: string;
-  allowLateSubmission: boolean;
-  totalMarks: number;
-  status: "PUBLISHED" | "DRAFT";
-  createdAt: string;
-  updatedAt: string;
-  course: { id: string; title: string; description?: string | null; };
-  submissionsCount: number;
-  gradedCount: number;
-}
+import { HomeworkAssignment } from "@/types/api.types";
+import { TeacherSubmissionData } from "@/types/api.types";
 
 export function useTeacherHomework() {
   return useQuery<HomeworkAssignment[]>({
@@ -113,42 +99,6 @@ export function useReopenResubmission() {
       return result;
     },
   });
-}
-
-export interface TeacherSubmissionData {
-  homework: HomeworkAssignment;
-  totalStudents: number;
-  submittedCount: number;
-  gradedCount: number;
-  pendingCount: number;
-  students: {
-    student: {
-      id: string;
-      name: string;
-      rollNumber: string;
-      className: string | null;
-      profilePhotoUrl: string | null;
-    };
-    status: "PENDING" | "SUBMITTED" | "LATE" | "GRADED";
-    hasSubmission: boolean;
-    submission: {
-      id: string;
-      studentId: string;
-      textSubmission: string | null;
-      submittedAt: string;
-      status: "PENDING" | "SUBMITTED" | "LATE" | "GRADED";
-      marks: number | null;
-      feedback: string | null;
-      gradedAt: string | null;
-      attachments: {
-        id: string;
-        fileName: string;
-        mimeType: string;
-        size: number;
-        publicUrl: string;
-      }[];
-    } | null;
-  }[];
 }
 
 export function useTeacherSubmissions(homeworkId: string | null) {

@@ -26,7 +26,9 @@ import {
   UploadCloud,
   Trash2
 } from "lucide-react";
-import { useStudentHomework, useStudentHomeworkDetail, useStudentSubmission, useSubmitHomework, StudentHomework as StudentHomeworkType } from "@/features/homework/services";
+import { useStudentHomework, useStudentHomeworkDetail, useStudentSubmission, useSubmitHomework } from "@/features/homework/services";
+import type { StudentHomework as StudentHomeworkType } from "@/types/api.types";
+import { downloadFileWithAuth } from "@/lib/api-client";
 import { useAuth } from "@/features/auth/context/auth-context";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
@@ -257,11 +259,14 @@ export function StudentHomework() {
                               <FileText className="h-4 w-4 text-indigo-500 shrink-0" />
                               <span className="font-semibold text-slate-700 truncate">{att.fileName}</span>
                             </div>
-                            <a href={att.publicUrl || att.downloadUrl || "#"} target="_blank" rel="noopener noreferrer">
-                              <Button size="icon" variant="ghost" className="h-7 w-7 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50">
-                                <Download className="h-3.5 w-3.5" />
-                              </Button>
-                            </a>
+                            <Button 
+                              size="icon" 
+                              variant="ghost" 
+                              className="h-7 w-7 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
+                              onClick={() => downloadFileWithAuth(`/homework/student/${hw.id}/attachments/${att.id}`, att.fileName)}
+                            >
+                              <Download className="h-3.5 w-3.5" />
+                            </Button>
                           </div>
                         ))}
                       </div>

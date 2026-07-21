@@ -1,41 +1,29 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Plus, Search, MoreHorizontal, Eye, ChevronLeft, ChevronRight,
-  BookOpen, Loader2,
+  Plus, Search, Eye, ChevronLeft, ChevronRight,
+  BookOpen, Loader2, AlertCircle, GraduationCap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/shared/page-header";
-import { mockTeachers } from "@/features/teachers/data/mock-teachers";
-import { useSearchTeacher } from "@/features/teachers/services";
-
-const statusStyles: Record<string, string> = {
-  active: "bg-emerald-100 text-emerald-700 border-emerald-200",
-  "on-leave": "bg-amber-100 text-amber-700 border-amber-200",
-  inactive: "bg-gray-100 text-gray-600 border-gray-200",
-};
-
-const departments = [
-  "Science", "Mathematics", "English", "Hindi", "Social Studies",
-  "Computer Science", "Physical Education", "Arts", "Commerce",
-];
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  useAdminTeachers,
+  useUpdateAdminTeacher,
+} from "@/features/admin/services/admin.service";
+import { useAssignClass } from "@/features/teachers/services";
+import { toast } from "sonner";
 
 const PAGE_SIZE = 10;
 
@@ -63,91 +51,35 @@ const AssignClassModal = dynamic(
   }
 );
 
+function getInitials(name: string) {
+  return name.split(" ").map((n) => n[0]).join("").toUpperCase().substring(0, 2);
+}
+
+function classLabel(title: string, desc?: string | null) {
+  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(title?.trim() ?? "");
+  return isUUID
+    ? `Class${desc ? ` ${desc}` : ""}`
+    : `${title}${desc ? ` — ${desc}` : ""}`;
+}
+
 export function TeachersPage() {
   const [search, setSearch] = useState("");
-  const [deptFilter, setDeptFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
   const [page, setPage] = useState(0);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [assignTeacherEmail, setAssignTeacherEmail] = useState<string | null>(null);
-  const [teachers, setTeachers] = useState<any[]>([]);
 
-  // Load teachers from localStorage
-  useEffect(() => {
-    const loadTeachers = () => {
-      const stored = localStorage.getItem("radora_teachers");
-      if (stored) {
-        setTeachers(JSON.parse(stored));
-      } else {
-        localStorage.setItem("radora_teachers", JSON.stringify(mockTeachers));
-        setTeachers(mockTeachers);
-      }
-    };
-
-    loadTeachers();
-
-    window.addEventListener("storage", loadTeachers);
-    return () => window.removeEventListener("storage", loadTeachers);
-  }, []);
-
-  // Debounced search term for API query
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearch(search.trim());
-    }, 600);
-    return () => clearTimeout(handler);
-  }, [search]);
-
-  // Backend search hook
-  const { data: searchedTeacher } = useSearchTeacher(
-    debouncedSearch,
-    !!debouncedSearch && debouncedSearch.includes("@") // only search if it looks like an email
-  );
-
-  // Sync searched teacher into local state
-  useEffect(() => {
-    if (searchedTeacher) {
-      const exists = teachers.some(
-        (t) => t.email.toLowerCase() === searchedTeacher.email.toLowerCase()
-      );
-      if (!exists) {
-        const names = (searchedTeacher.name || "").split(" ");
-        const firstName = names[0] || "Teacher";
-        const lastName = names.slice(1).join(" ") || "";
-
-        const normalized = {
-          id: searchedTeacher.id,
-          firstName,
-          lastName,
-          name: searchedTeacher.name,
-          email: searchedTeacher.email,
-          department: "Science",
-          subject: searchedTeacher.courses?.[0]?.title || "General",
-          experience: "3 Years",
-          status: "active",
-          courses: searchedTeacher.courses || [],
-        };
-
-        const updated = [normalized, ...teachers];
-        setTeachers(updated);
-        localStorage.setItem("radora_teachers", JSON.stringify(updated));
-      }
-    }
-  }, [searchedTeacher, teachers]);
+  const { data: teachers, isLoading, isError, refetch } = useAdminTeachers();
 
   const filtered = useMemo(() => {
-    return teachers.filter((t) => {
-      const matchesSearch =
-        !search ||
-        `${t.firstName} ${t.lastName}`.toLowerCase().includes(search.toLowerCase()) ||
-        t.email.toLowerCase().includes(search.toLowerCase()) ||
-        (t.subject && t.subject.toLowerCase().includes(search.toLowerCase()));
-      const matchesDept = deptFilter === "all" || t.department === deptFilter;
-      const matchesStatus = statusFilter === "all" || t.status === statusFilter;
-      return matchesSearch && matchesDept && matchesStatus;
-    });
-  }, [teachers, search, deptFilter, statusFilter]);
+    const q = search.toLowerCase();
+    return (teachers ?? []).filter(
+      (t) =>
+        !q ||
+        t.name.toLowerCase().includes(q) ||
+        t.email.toLowerCase().includes(q) ||
+        t.courses.some((c) => classLabel(c.title, c.description).toLowerCase().includes(q))
+    );
+  }, [teachers, search]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paginated = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
@@ -155,11 +87,21 @@ export function TeachersPage() {
   return (
     <>
       <AnimatePresence>
-        {showCreateModal && <CreateTeacherModal onClose={() => setShowCreateModal(false)} />}
+        {showCreateModal && (
+          <CreateTeacherModal
+            onClose={() => {
+              setShowCreateModal(false);
+              refetch();
+            }}
+          />
+        )}
         {assignTeacherEmail && (
           <AssignClassModal
             teacherEmail={assignTeacherEmail}
-            onClose={() => setAssignTeacherEmail(null)}
+            onClose={() => {
+              setAssignTeacherEmail(null);
+              refetch();
+            }}
           />
         )}
       </AnimatePresence>
@@ -172,7 +114,7 @@ export function TeachersPage() {
       >
         <PageHeader
           title="Teachers"
-          description="Manage teacher profiles and assignments."
+          description="Manage teacher profiles and class assignments."
           action={
             <Button
               className="bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-sm"
@@ -184,151 +126,162 @@ export function TeachersPage() {
           }
         />
 
-        {/* Filters */}
+        {/* Search */}
         <Card className="p-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search by name, email, or subject..."
-                value={search}
-                onChange={(e) => { setSearch(e.target.value); setPage(0); }}
-                className="pl-8 h-9 text-sm"
-              />
-            </div>
-            <div className="flex gap-2">
-              <Select value={deptFilter} onValueChange={(v) => { setDeptFilter(v ?? "all"); setPage(0); }}>
-                <SelectTrigger className="h-9 w-36 text-xs"><SelectValue placeholder="Department" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Departments</SelectItem>
-                  {departments.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v ?? "all"); setPage(0); }}>
-                <SelectTrigger className="h-9 w-28 text-xs"><SelectValue placeholder="Status" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="on-leave">On Leave</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="relative max-w-sm">
+            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search by name, email, or class..."
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+              className="pl-8 h-9 text-sm"
+            />
           </div>
         </Card>
 
+        {/* Loading */}
+        {isLoading && (
+          <Card>
+            <CardContent className="p-0">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="flex items-center gap-4 px-4 py-3.5 border-b last:border-0">
+                  <Skeleton className="h-8 w-8 rounded-full" />
+                  <div className="flex-1 space-y-1.5">
+                    <Skeleton className="h-4 w-40" />
+                    <Skeleton className="h-3 w-56" />
+                  </div>
+                  <Skeleton className="h-6 w-20" />
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Error */}
+        {isError && (
+          <Card className="border-red-100 bg-red-50">
+            <CardContent className="p-6 flex items-center gap-3 text-red-700">
+              <AlertCircle className="h-5 w-5 shrink-0" />
+              <p className="text-sm">Failed to load teachers. Please refresh.</p>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Table */}
-        <Card>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Teacher</TableHead>
-                <TableHead>Department</TableHead>
-                <TableHead>Subject</TableHead>
-                <TableHead className="hidden md:table-cell">Experience</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="hidden lg:table-cell">Classes</TableHead>
-                <TableHead className="w-[100px]" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {paginated.length === 0 ? (
+        {!isLoading && !isError && (
+          <Card>
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
-                    No teachers found matching your filters.
-                  </TableCell>
+                  <TableHead>Teacher</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead className="hidden lg:table-cell">Assigned Classes</TableHead>
+                  <TableHead className="hidden md:table-cell">Students</TableHead>
+                  <TableHead className="w-[120px]" />
                 </TableRow>
-              ) : (
-                paginated.map((teacher) => (
-                  <TableRow key={teacher.id} className="cursor-pointer hover:bg-muted/50 transition-colors">
-                    <TableCell>
-                      <Link href={`/teachers/${teacher.id}`} className="flex items-center gap-3">
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback className="bg-purple-100 text-purple-700 text-xs font-medium">
-                            {teacher.firstName[0]}{teacher.lastName[0]}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="text-sm font-medium">{teacher.firstName} {teacher.lastName}</p>
-                          <p className="text-xs text-muted-foreground">{teacher.email}</p>
-                        </div>
-                      </Link>
-                    </TableCell>
-                    <TableCell className="text-sm">{teacher.department}</TableCell>
-                    <TableCell className="text-sm">{teacher.subject}</TableCell>
-                    <TableCell className="hidden md:table-cell text-sm">{teacher.experience}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={`text-[11px] ${statusStyles[teacher.status] || ""}`}>
-                        {teacher.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell">
-                      {teacher.courses && teacher.courses.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {teacher.courses.slice(0, 2).map((c: any, i: number) => (
-                            <Badge key={i} variant="secondary" className="text-[10px] bg-indigo-50 text-indigo-700 border-indigo-200">
-                              {c.title}
-                            </Badge>
-                          ))}
-                          {teacher.courses.length > 2 && (
-                            <Badge variant="secondary" className="text-[10px]">
-                              +{teacher.courses.length - 2}
-                            </Badge>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">None assigned</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 px-2 text-xs text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
-                          onClick={() => setAssignTeacherEmail(teacher.email)}
-                        >
-                          <BookOpen className="mr-1 h-3 w-3" />
-                          Assign
-                        </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger className="h-8 w-8 inline-flex items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem>
-                              <Link href={`/teachers/${teacher.id}`} className="flex items-center">
-                                <Eye className="mr-2 h-3.5 w-3.5" /> View Profile
-                              </Link>
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
+              </TableHeader>
+              <TableBody>
+                {paginated.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
+                      {search ? "No teachers match your search." : "No teachers found. Add one to get started."}
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-          <div className="flex items-center justify-between border-t px-4 py-3">
-            <p className="text-xs text-muted-foreground">
-              Showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, filtered.length)} of {filtered.length} teachers
-            </p>
-            <div className="flex items-center gap-1">
-              <Button variant="outline" size="icon" className="h-7 w-7" disabled={page === 0} onClick={() => setPage(page - 1)}>
-                <ChevronLeft className="h-3.5 w-3.5" />
-              </Button>
-              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => (
-                <Button key={i} variant={page === i ? "default" : "outline"} size="icon" className="h-7 w-7 text-xs" onClick={() => setPage(i)}>
-                  {i + 1}
-                </Button>
-              ))}
-              <Button variant="outline" size="icon" className="h-7 w-7" disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)}>
-                <ChevronRight className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-          </div>
-        </Card>
+                ) : (
+                  paginated.map((teacher) => {
+                    const totalStudents = teacher.courses.reduce(
+                      (acc, c) => acc + (c._count?.enrollments ?? 0),
+                      0
+                    );
+                    return (
+                      <TableRow key={teacher.id} className="hover:bg-muted/50 transition-colors">
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-8 w-8">
+                              <AvatarFallback className="bg-purple-100 text-purple-700 text-xs font-semibold">
+                                {getInitials(teacher.name)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="text-sm font-medium">{teacher.name}</p>
+                              {teacher.address && (
+                                <p className="text-xs text-muted-foreground truncate max-w-[180px]">{teacher.address}</p>
+                              )}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{teacher.email}</TableCell>
+                        <TableCell className="hidden lg:table-cell">
+                          {teacher.courses.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {teacher.courses.slice(0, 3).map((c) => (
+                                <Badge
+                                  key={c.id}
+                                  variant="secondary"
+                                  className="text-[10px] bg-indigo-50 text-indigo-700 border-indigo-200"
+                                >
+                                  {classLabel(c.title, c.description)}
+                                </Badge>
+                              ))}
+                              {teacher.courses.length > 3 && (
+                                <Badge variant="secondary" className="text-[10px]">
+                                  +{teacher.courses.length - 3}
+                                </Badge>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">None assigned</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell text-sm">{totalStudents}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2 text-xs text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
+                              onClick={() => setAssignTeacherEmail(teacher.email)}
+                            >
+                              <BookOpen className="mr-1 h-3 w-3" />
+                              Assign
+                            </Button>
+                            <Link href={`/teachers/${teacher.id}`}>
+                              <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">
+                                <Eye className="h-3.5 w-3.5" />
+                              </Button>
+                            </Link>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between border-t px-4 py-3">
+                <p className="text-xs text-muted-foreground">
+                  Showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, filtered.length)} of {filtered.length}
+                </p>
+                <div className="flex items-center gap-1">
+                  <Button variant="outline" size="icon" className="h-7 w-7" disabled={page === 0} onClick={() => setPage(page - 1)}>
+                    <ChevronLeft className="h-3.5 w-3.5" />
+                  </Button>
+                  {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => (
+                    <Button key={i} variant={page === i ? "default" : "outline"} size="icon" className="h-7 w-7 text-xs" onClick={() => setPage(i)}>
+                      {i + 1}
+                    </Button>
+                  ))}
+                  <Button variant="outline" size="icon" className="h-7 w-7" disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)}>
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </Card>
+        )}
       </motion.div>
     </>
   );

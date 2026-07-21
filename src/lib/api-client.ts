@@ -127,3 +127,36 @@ export async function fetchJsonWithAuth<T>(
 // Keep this export for any code that still references the raw base URL
 // (e.g., form uploads that bypass the proxy). Avoid using this in new code.
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
+
+/**
+ * Downloads a file securely with auth cookies, and triggers a browser download.
+ */
+export async function downloadFileWithAuth(
+  endpoint: string,
+  filename: string
+): Promise<void> {
+  const response = await fetchWithAuth(endpoint);
+
+  if (!response.ok) {
+    let errorMsg = "Failed to download file";
+    try {
+      const errorJson = await response.json();
+      errorMsg = errorJson.error || errorJson.message || errorMsg;
+    } catch {
+      // Ignored
+    }
+    throw new Error(errorMsg);
+  }
+
+  const blob = await response.blob();
+  const url = window.URL.createObjectURL(blob);
+  
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename || "download";
+  document.body.appendChild(a);
+  a.click();
+  
+  document.body.removeChild(a);
+  window.URL.revokeObjectURL(url);
+}

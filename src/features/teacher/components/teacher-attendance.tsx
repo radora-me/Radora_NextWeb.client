@@ -20,11 +20,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CheckCircle, XCircle, Clock, Calendar, Users, Save, Loader2, PartyPopper, History, TrendingUp } from "lucide-react";
+import { CheckCircle, XCircle, Clock, Calendar, Users, Save, Loader2, PartyPopper, History, TrendingUp, BookOpen, Layers } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { useTeacherCourses, useCourseAttendance, useSubmitAttendance, useUpdateStudentAttendance, useTeacherHolidays, useStudentAttendanceHistory, StudentAttendanceRecord } from "@/features/attendance/services";
+import { useTeacherCourses, useCourseAttendance, useSubmitAttendance, useUpdateStudentAttendance, useTeacherHolidays, useStudentAttendanceHistory, useSubmitSubjectAttendance } from "@/features/attendance/services";
+import type { StudentAttendanceRecord } from "@/types/api.types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
@@ -54,6 +55,8 @@ export function TeacherAttendance() {
   const [localAttendance, setLocalAttendance] = useState<StudentAttendanceRecord[]>([]);
   const [savingStudentId, setSavingStudentId] = useState<string | null>(null);
   const [historyStudent, setHistoryStudent] = useState<{ rollNumber: string; name: string } | null>(null);
+  const [attendanceMode, setAttendanceMode] = useState<"FULL_DAY" | "SUBJECT_WISE">("FULL_DAY");
+  const [subjectName, setSubjectName] = useState("");
 
   // 1. Fetch Teacher Courses for Dropdown
   const { data: courses, isLoading: coursesLoading } = useTeacherCourses();
@@ -79,7 +82,8 @@ export function TeacherAttendance() {
     }
   }, [attendanceData]);
 
-  const { mutate: submitAttendance, isPending: isSubmitting } = useSubmitAttendance();
+  const { mutate: submitAttendance, isPending: isSubmittingFullDay } = useSubmitAttendance();
+  const { mutate: submitSubjectAttendance, isPending: isSubmittingSubject } = useSubmitSubjectAttendance();
   const { mutateAsync: updateStudentAttendance } = useUpdateStudentAttendance();
   const { data: holidays } = useTeacherHolidays();
   const { data: attendanceHistory, isLoading: historyLoading } = useStudentAttendanceHistory(
@@ -121,22 +125,47 @@ export function TeacherAttendance() {
   const handleSubmit = () => {
     if (!selectedCourseId) return;
 
-    submitAttendance(
-      {
-        courseId: selectedCourseId,
-        date: dateStr,
-        students: localAttendance.map(s => ({ studentId: s.studentId, status: s.status })),
-      },
-      {
-        onSuccess: () => {
-          toast.success("Attendance submitted successfully!");
-          refetchAttendance(); // Refresh to get updated 'isMarked' flags
-        },
-        onError: (err) => {
-          toast.error(`Failed to submit attendance: ${err.message}`);
-        }
+    const payloadStudents = localAttendance.map(s => ({ studentId: s.studentId, status: s.status }));
+
+    if (attendanceMode === "SUBJECT_WISE") {
+      if (!subjectName.trim()) {
+        toast.error("Please enter a subject name.");
+        return;
       }
-    );
+      submitSubjectAttendance(
+        {
+          courseId: selectedCourseId,
+          date: dateStr,
+          subjectName: subjectName.trim(),
+          students: payloadStudents,
+        },
+        {
+          onSuccess: () => {
+            toast.success(`Subject attendance for ${subjectName} submitted successfully!`);
+          },
+          onError: (err) => {
+            toast.error(`Failed to submit attendance: ${err.message}`);
+          }
+        }
+      );
+    } else {
+      submitAttendance(
+        {
+          courseId: selectedCourseId,
+          date: dateStr,
+          students: payloadStudents,
+        },
+        {
+          onSuccess: () => {
+            toast.success("Attendance submitted successfully!");
+            refetchAttendance(); // Refresh to get updated 'isMarked' flags
+          },
+          onError: (err) => {
+            toast.error(`Failed to submit attendance: ${err.message}`);
+          }
+        }
+      );
+    }
   };
 
   return (
@@ -152,8 +181,31 @@ export function TeacherAttendance() {
         animate="visible"
         className="space-y-6"
       >
-        <motion.div variants={itemVariants} className="flex flex-col sm:flex-row gap-4 p-4 bg-white dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
-          <div className="flex-1 space-y-2">
+        <motion.div variants={itemVariants} className="flex flex-col gap-4 p-4 bg-white dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
+          {/* Mode Toggle */}
+          <div className="flex items-center gap-2 mb-2">
+            <Button
+              variant={attendanceMode === "FULL_DAY" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setAttendanceMode("FULL_DAY")}
+              className={attendanceMode === "FULL_DAY" ? "bg-indigo-600 hover:bg-indigo-700" : ""}
+            >
+              <Calendar className="w-4 h-4 mr-2" />
+              Full Day Attendance
+            </Button>
+            <Button
+              variant={attendanceMode === "SUBJECT_WISE" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setAttendanceMode("SUBJECT_WISE")}
+              className={attendanceMode === "SUBJECT_WISE" ? "bg-indigo-600 hover:bg-indigo-700" : ""}
+            >
+              <Layers className="w-4 h-4 mr-2" />
+              Subject-Wise Attendance
+            </Button>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1 space-y-2">
             <label className="text-sm font-medium flex items-center gap-2 text-zinc-700 dark:text-zinc-300">
               <Users className="w-4 h-4 text-indigo-500" />
               Select Class
@@ -194,6 +246,23 @@ export function TeacherAttendance() {
               onChange={(e) => setDateStr(e.target.value)}
               className="w-full sm:w-[250px]"
             />
+          </div>
+
+          {attendanceMode === "SUBJECT_WISE" && (
+            <div className="flex-1 space-y-2">
+              <label className="text-sm font-medium flex items-center gap-2 text-zinc-700 dark:text-zinc-300">
+                <BookOpen className="w-4 h-4 text-indigo-500" />
+                Subject
+              </label>
+              <Input
+                type="text"
+                placeholder="e.g. Mathematics"
+                value={subjectName}
+                onChange={(e) => setSubjectName(e.target.value)}
+                className="w-full sm:w-[250px]"
+              />
+            </div>
+          )}
           </div>
         </motion.div>
 
@@ -328,19 +397,19 @@ export function TeacherAttendance() {
           </div>
         </motion.div>
 
-        <motion.div variants={itemVariants} className="flex justify-end pt-4">
+        <motion.div variants={itemVariants} className="flex justify-end pt-2">
           <Button 
-            onClick={handleSubmit} 
             size="lg" 
-            disabled={isSubmitting || localAttendance.length === 0}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-md disabled:bg-indigo-400"
+            className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-200 dark:shadow-none"
+            onClick={handleSubmit}
+            disabled={isSubmittingFullDay || isSubmittingSubject || localAttendance.length === 0}
           >
-            {isSubmitting ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            {isSubmittingFullDay || isSubmittingSubject ? (
+              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
             ) : (
-              <Save className="w-4 h-4 mr-2" />
+              <Save className="w-5 h-5 mr-2" />
             )}
-            Submit Attendance
+            {attendanceMode === "SUBJECT_WISE" ? "Submit Subject Attendance" : "Submit Full Day Attendance"}
           </Button>
         </motion.div>
       </motion.div>
