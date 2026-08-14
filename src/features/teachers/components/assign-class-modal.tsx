@@ -10,7 +10,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { useAssignClass } from "@/features/teachers/services";
+import { useAssignTeacherClass } from "@/features/admin/services/admin.service";
 
 export function AssignClassModal({
   teacherEmail: initialEmail,
@@ -25,7 +25,7 @@ export function AssignClassModal({
   const [formError, setFormError] = useState("");
   const [success, setSuccess] = useState(false);
 
-  const assignMutation = useAssignClass();
+  const assignMutation = useAssignTeacherClass();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,29 +42,6 @@ export function AssignClassModal({
         className: className.trim(),
         section: section.trim().toUpperCase(),
       });
-
-      // Update local storage so classes list immediately
-      const stored = localStorage.getItem("radora_teachers");
-      if (stored) {
-        const teachersList = JSON.parse(stored);
-        const updated = teachersList.map((t: any) => {
-          if (t.email.toLowerCase() === email.trim().toLowerCase()) {
-            const currentCourses = t.courses || [];
-            const courseTitle = `${className}-${section.toUpperCase()}`;
-            const exists = currentCourses.some((c: any) => c.title === courseTitle);
-            if (!exists) {
-              return {
-                ...t,
-                subject: `${className}-${section.toUpperCase()}`,
-                courses: [...currentCourses, { id: response.course?.id || Date.now().toString(), title: courseTitle, description: section.toUpperCase() }],
-              };
-            }
-          }
-          return t;
-        });
-        localStorage.setItem("radora_teachers", JSON.stringify(updated));
-        window.dispatchEvent(new Event("storage"));
-      }
 
       setSuccess(true);
     } catch (err: any) {

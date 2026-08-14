@@ -54,10 +54,32 @@ export function useTeacherAddStudent() {
 export function useTeacherDeepStudentProfile(rollNumber: string | null) {
   return useQuery<StudentProfileData>({
     queryKey: ["teacher-deep-student-profile", rollNumber],
-    queryFn: () =>
-      fetchJsonWithAuth<StudentProfileData>(
+    queryFn: async () => {
+      // getFullProfile returns _toStudentPayload which nests profile under studentProfile
+      const raw = await fetchJsonWithAuth<any>(
         `/teacher/students/by-roll/${encodeURIComponent(rollNumber!.trim())}/profile`
-      ),
+      );
+      // Flatten the nested studentProfile sub-document into a flat object
+      const sp = raw.studentProfile || {};
+      return {
+        id: raw.id,
+        name: raw.name,
+        rollNumber: raw.rollNumber,
+        className: raw.className,
+        profilePhotoUrl: raw.profilePhotoUrl,
+        address: sp.address ?? null,
+        city: sp.city ?? null,
+        state: sp.state ?? null,
+        pincode: sp.pincode ?? null,
+        parentName: sp.parentName ?? null,
+        parentEmail: sp.parentEmail ?? null,
+        parentPhone: sp.parentPhone ?? null,
+        parentRelation: sp.parentRelation ?? null,
+        dateOfBirth: sp.dateOfBirth ?? null,
+        bloodGroup: sp.bloodGroup ?? null,
+        emergencyPhone: sp.emergencyPhone ?? null,
+      } as StudentProfileData;
+    },
     enabled: !!rollNumber?.trim(),
   });
 }
@@ -90,3 +112,4 @@ export function useUpdateStudentProfile() {
     },
   });
 }
+

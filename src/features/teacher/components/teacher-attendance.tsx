@@ -20,76 +20,113 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CheckCircle, XCircle, Clock, Calendar, Users, Save, Loader2, PartyPopper, History, TrendingUp, BookOpen, Layers } from "lucide-react";
+import {
+  CheckCircle, XCircle, Users, Save,
+  Loader2, PartyPopper, History, FileX, CalendarCheck, Calendar, RotateCcw,
+} from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { useTeacherCourses, useCourseAttendance, useSubmitAttendance, useUpdateStudentAttendance, useTeacherHolidays, useStudentAttendanceHistory, useSubmitSubjectAttendance } from "@/features/attendance/services";
+import {
+  useTeacherCourses,
+  useCourseAttendance,
+  useSubmitAttendance,
+  useUpdateStudentAttendance,
+  useTeacherHolidays,
+  useStudentAttendanceHistory,
+} from "@/features/attendance/services";
 import type { StudentAttendanceRecord } from "@/types/api.types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
-type AttendanceStatus = "PRESENT" | "ABSENT" | "LATE";
+type AttendanceStatus = "PRESENT" | "ABSENT" | "LEAVE";
 
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-    },
+    transition: { staggerChildren: 0.1 },
   },
 };
 
 const itemVariants = {
   hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-  },
+  visible: { opacity: 1, y: 0 },
 };
 
+// ── Status button config ──────────────────────────────────────────────────────
+const STATUS_CONFIG: {
+  status: AttendanceStatus;
+  label: string;
+  icon: React.ElementType;
+  active: string;
+  inactive: string;
+}[] = [
+  {
+    status: "PRESENT",
+    label: "Present",
+    icon: CheckCircle,
+    active: "bg-emerald-500 hover:bg-emerald-600 text-white border-emerald-500",
+    inactive: "text-zinc-500 hover:text-emerald-600 hover:border-emerald-300",
+  },
+  {
+    status: "ABSENT",
+    label: "Absent",
+    icon: XCircle,
+    active: "bg-rose-500 hover:bg-rose-600 text-white border-rose-500",
+    inactive: "text-zinc-500 hover:text-rose-600 hover:border-rose-300",
+  },
+  {
+    status: "LEAVE",
+    label: "Leave",
+    icon: FileX,
+    active: "bg-violet-500 hover:bg-violet-600 text-white border-violet-500",
+    inactive: "text-zinc-500 hover:text-violet-600 hover:border-violet-300",
+  },
+];
+
 export function TeacherAttendance() {
+  const todayStr = new Date().toLocaleDateString("en-CA");
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
-  const [dateStr, setDateStr] = useState(new Date().toISOString().split("T")[0]);
+  const [dateStr, setDateStr] = useState(todayStr);
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [selectedPastDate, setSelectedPastDate] = useState(todayStr);
   const [localAttendance, setLocalAttendance] = useState<StudentAttendanceRecord[]>([]);
   const [savingStudentId, setSavingStudentId] = useState<string | null>(null);
   const [historyStudent, setHistoryStudent] = useState<{ rollNumber: string; name: string } | null>(null);
-  const [attendanceMode, setAttendanceMode] = useState<"FULL_DAY" | "SUBJECT_WISE">("FULL_DAY");
-  const [subjectName, setSubjectName] = useState("");
 
-  // 1. Fetch Teacher Courses for Dropdown
+  // 1. Fetch teacher courses
   const { data: courses, isLoading: coursesLoading } = useTeacherCourses();
 
-  // Automatically select the first course if none is selected
+  // Auto-select first course
   useEffect(() => {
     if (courses && courses.length > 0 && !selectedCourseId) {
       setSelectedCourseId(courses[0].id);
     }
   }, [courses, selectedCourseId]);
 
-  // 2. Fetch Attendance for the selected course and date
-  const dateObj = new Date(dateStr);
-  const { data: attendanceData, isLoading: attendanceLoading, refetch: refetchAttendance } = useCourseAttendance(
-    selectedCourseId,
-    dateObj
-  );
+  // 2. Fetch attendance for selected course + date
+  const dateObj = new Date(dateStr + "T12:00:00");
+  const {
+    data: attendanceData,
+    isLoading: attendanceLoading,
+    refetch: refetchAttendance,
+  } = useCourseAttendance(selectedCourseId, dateObj);
 
-  // Sync fetched data to local state for editing
+  // Sync fetched data into local state
   useEffect(() => {
-    if (attendanceData) {
-      setLocalAttendance(attendanceData);
-    }
+    if (attendanceData) setLocalAttendance(attendanceData);
   }, [attendanceData]);
 
-  const { mutate: submitAttendance, isPending: isSubmittingFullDay } = useSubmitAttendance();
-  const { mutate: submitSubjectAttendance, isPending: isSubmittingSubject } = useSubmitSubjectAttendance();
+  const { mutate: submitAttendance, isPending: isSubmitting } = useSubmitAttendance();
   const { mutateAsync: updateStudentAttendance } = useUpdateStudentAttendance();
   const { data: holidays } = useTeacherHolidays();
   const { data: attendanceHistory, isLoading: historyLoading } = useStudentAttendanceHistory(
     selectedCourseId,
     historyStudent?.rollNumber ?? null
   );
+
+  // ── Handlers ────────────────────────────────────────────────────────────────
 
   const handleSingleSave = async (student: StudentAttendanceRecord) => {
     if (!selectedCourseId) return;
@@ -98,7 +135,7 @@ export function TeacherAttendance() {
       await updateStudentAttendance({
         courseId: selectedCourseId,
         rollNumber: student.rollNumber,
-        status: student.status as "PRESENT" | "ABSENT" | "LATE",
+        status: student.status as AttendanceStatus,
         date: dateStr,
       });
       toast.success(`${student.name}'s attendance updated to ${student.status}.`);
@@ -112,9 +149,7 @@ export function TeacherAttendance() {
 
   const handleStatusChange = (studentId: string, newStatus: AttendanceStatus) => {
     setLocalAttendance((prev) =>
-      prev.map((student) =>
-        student.studentId === studentId ? { ...student, status: newStatus } : student
-      )
+      prev.map((s) => (s.studentId === studentId ? { ...s, status: newStatus } : s))
     );
   };
 
@@ -124,49 +159,53 @@ export function TeacherAttendance() {
 
   const handleSubmit = () => {
     if (!selectedCourseId) return;
-
-    const payloadStudents = localAttendance.map(s => ({ studentId: s.studentId, status: s.status }));
-
-    if (attendanceMode === "SUBJECT_WISE") {
-      if (!subjectName.trim()) {
-        toast.error("Please enter a subject name.");
-        return;
+    submitAttendance(
+      {
+        courseId: selectedCourseId,
+        date: dateStr,
+        students: localAttendance.map((s) => ({ studentId: s.studentId, status: s.status })),
+      },
+      {
+        onSuccess: () => {
+          toast.success("Attendance submitted successfully!");
+          refetchAttendance();
+        },
+        onError: (err) => {
+          toast.error(`Failed to submit: ${err.message}`);
+        },
       }
-      submitSubjectAttendance(
-        {
-          courseId: selectedCourseId,
-          date: dateStr,
-          subjectName: subjectName.trim(),
-          students: payloadStudents,
-        },
-        {
-          onSuccess: () => {
-            toast.success(`Subject attendance for ${subjectName} submitted successfully!`);
-          },
-          onError: (err) => {
-            toast.error(`Failed to submit attendance: ${err.message}`);
-          }
-        }
-      );
-    } else {
-      submitAttendance(
-        {
-          courseId: selectedCourseId,
-          date: dateStr,
-          students: payloadStudents,
-        },
-        {
-          onSuccess: () => {
-            toast.success("Attendance submitted successfully!");
-            refetchAttendance(); // Refresh to get updated 'isMarked' flags
-          },
-          onError: (err) => {
-            toast.error(`Failed to submit attendance: ${err.message}`);
-          }
-        }
-      );
-    }
+    );
   };
+
+  // ── History summary badges ───────────────────────────────────────────────────
+
+  const historySummaryItems = attendanceHistory
+    ? [
+        { label: "Present", value: attendanceHistory.summary.present, cls: "bg-emerald-50 text-emerald-700" },
+        { label: "Absent",  value: attendanceHistory.summary.absent,  cls: "bg-rose-50 text-rose-700"    },
+        { label: "Leave",   value: attendanceHistory.summary.leave,   cls: "bg-violet-50 text-violet-700" },
+        { label: "Rate",    value: `${attendanceHistory.summary.percentage}%`, cls: "bg-indigo-50 text-indigo-700" },
+      ]
+    : [];
+
+  // ── Course label helper ──────────────────────────────────────────────────────
+
+  const courseLabel = (title: string, description?: string | null) => {
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(title?.trim() ?? "");
+    const base = isUUID ? "Class" : title;
+    return description ? `${base} — Section ${description}` : base;
+  };
+
+  // ── Status badge colour for history records ──────────────────────────────────
+
+  const statusBadgeClass = (status: string) => {
+    if (status === "PRESENT") return "bg-emerald-50 text-emerald-700 border-emerald-200";
+    if (status === "ABSENT")  return "bg-rose-50 text-rose-700 border-rose-200";
+    if (status === "LEAVE")   return "bg-violet-50 text-violet-700 border-violet-200";
+    return "bg-zinc-100 text-zinc-600";
+  };
+
+  // ── Render ───────────────────────────────────────────────────────────────────
 
   return (
     <div className="space-y-6">
@@ -181,31 +220,13 @@ export function TeacherAttendance() {
         animate="visible"
         className="space-y-6"
       >
-        <motion.div variants={itemVariants} className="flex flex-col gap-4 p-4 bg-white dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
-          {/* Mode Toggle */}
-          <div className="flex items-center gap-2 mb-2">
-            <Button
-              variant={attendanceMode === "FULL_DAY" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setAttendanceMode("FULL_DAY")}
-              className={attendanceMode === "FULL_DAY" ? "bg-indigo-600 hover:bg-indigo-700" : ""}
-            >
-              <Calendar className="w-4 h-4 mr-2" />
-              Full Day Attendance
-            </Button>
-            <Button
-              variant={attendanceMode === "SUBJECT_WISE" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setAttendanceMode("SUBJECT_WISE")}
-              className={attendanceMode === "SUBJECT_WISE" ? "bg-indigo-600 hover:bg-indigo-700" : ""}
-            >
-              <Layers className="w-4 h-4 mr-2" />
-              Subject-Wise Attendance
-            </Button>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1 space-y-2">
+        {/* ── Controls ── */}
+        <motion.div
+          variants={itemVariants}
+          className="flex flex-col sm:flex-row items-end gap-4 p-4 bg-white dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm"
+        >
+          {/* Class selector */}
+          <div className="flex-1 space-y-2">
             <label className="text-sm font-medium flex items-center gap-2 text-zinc-700 dark:text-zinc-300">
               <Users className="w-4 h-4 text-indigo-500" />
               Select Class
@@ -216,58 +237,50 @@ export function TeacherAttendance() {
               disabled={coursesLoading}
             >
               <SelectTrigger className="w-full sm:w-[350px]">
-                <SelectValue placeholder={coursesLoading ? "Loading classes..." : "Select a class"} />
+                <SelectValue placeholder={coursesLoading ? "Loading classes…" : "Select a class"} />
               </SelectTrigger>
               <SelectContent>
-                {courses?.map((course) => {
-                  // Guard against UUID-looking titles (bad data entry)
-                  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(course.title?.trim() ?? "");
-                  const label = isUUID
-                    ? `Class${course.description ? ` — Section ${course.description}` : ""}`
-                    : `${course.title}${course.description ? ` — Section ${course.description}` : ""}`;
-                  return (
-                    <SelectItem key={course.id} value={course.id}>
-                      {label} ({course._count.enrollments} student{course._count.enrollments !== 1 ? "s" : ""})
-                    </SelectItem>
-                  );
-                })}
+                {courses?.map((course) => (
+                  <SelectItem key={course.id} value={course.id}>
+                    {courseLabel(course.title, course.description)}
+                    {" "}({course._count.enrollments} student{course._count.enrollments !== 1 ? "s" : ""})
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
 
-          <div className="flex-1 space-y-2">
-            <label className="text-sm font-medium flex items-center gap-2 text-zinc-700 dark:text-zinc-300">
-              <Calendar className="w-4 h-4 text-indigo-500" />
-              Date
-            </label>
-            <Input
-              type="date"
-              value={dateStr}
-              onChange={(e) => setDateStr(e.target.value)}
-              className="w-full sm:w-[250px]"
-            />
-          </div>
-
-          {attendanceMode === "SUBJECT_WISE" && (
-            <div className="flex-1 space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2 text-zinc-700 dark:text-zinc-300">
-                <BookOpen className="w-4 h-4 text-indigo-500" />
-                Subject
-              </label>
-              <Input
-                type="text"
-                placeholder="e.g. Mathematics"
-                value={subjectName}
-                onChange={(e) => setSubjectName(e.target.value)}
-                className="w-full sm:w-[250px]"
-              />
+          {/* Date display & indicator */}
+          {dateStr === todayStr ? (
+            <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-700 text-sm font-medium shrink-0">
+              <CalendarCheck className="w-4 h-4" />
+              Today ({new Date().toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", year: "numeric" })})
+            </div>
+          ) : (
+            <div className="flex items-center gap-3 px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm font-medium shrink-0">
+              <div className="flex items-center gap-1.5">
+                <Calendar className="w-4 h-4 text-amber-600" />
+                <span>Editing: {new Date(dateStr + "T12:00:00").toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}</span>
+              </div>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 px-2 text-xs text-amber-700 hover:bg-amber-100 hover:text-amber-900"
+                onClick={() => setDateStr(todayStr)}
+              >
+                <RotateCcw className="w-3 h-3 mr-1" />
+                Reset to Today
+              </Button>
             </div>
           )}
-          </div>
         </motion.div>
 
-        <motion.div variants={itemVariants} className="bg-white dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
-          {/* Holidays banner */}
+        {/* ── Student table ── */}
+        <motion.div
+          variants={itemVariants}
+          className="bg-white dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden"
+        >
+          {/* Holiday banner */}
           {holidays && holidays.length > 0 && (
             <div className="px-4 py-2.5 bg-amber-50 border-b border-amber-100 flex items-center gap-2 flex-wrap">
               <PartyPopper className="w-4 h-4 text-amber-500 shrink-0" />
@@ -279,18 +292,23 @@ export function TeacherAttendance() {
               ))}
             </div>
           )}
+
+          {/* Table header row */}
           <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center bg-zinc-50/50 dark:bg-zinc-900/50">
             <h3 className="font-semibold text-zinc-900 dark:text-white flex items-center gap-2">
               Student List
               {attendanceLoading && <Loader2 className="w-4 h-4 animate-spin text-indigo-500" />}
             </h3>
-            <div className="flex gap-2">
-              <Button size="sm" variant="outline" onClick={() => handleMarkAll("PRESENT")} className="text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900 hover:bg-emerald-50 dark:hover:bg-emerald-900/30">
-                Mark All Present
-              </Button>
-            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleMarkAll("PRESENT")}
+              className="text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+            >
+              Mark All Present
+            </Button>
           </div>
-          
+
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -321,50 +339,37 @@ export function TeacherAttendance() {
                   localAttendance.map((student) => (
                     <TableRow
                       key={student.studentId}
-                      className="cursor-pointer"
-                      onClick={() => setHistoryStudent({ rollNumber: student.rollNumber, name: student.name })}
+                      className="cursor-pointer hover:bg-zinc-50/60 dark:hover:bg-zinc-900/40 transition-colors"
+                      onClick={() =>
+                        setHistoryStudent({ rollNumber: student.rollNumber, name: student.name })
+                      }
                     >
                       <TableCell className="font-medium text-zinc-500">{student.rollNumber}</TableCell>
                       <TableCell className="font-medium">
                         {student.name}
                         {student.isMarked && (
                           <span className="ml-2 text-xs text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">
-                            Already Marked
+                            Marked
                           </span>
                         )}
                       </TableCell>
-                      <TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-center gap-2">
-                          <Button
-                            type="button"
-                            variant={student.status === "PRESENT" ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => handleStatusChange(student.studentId, "PRESENT")}
-                            className={student.status === "PRESENT" ? "bg-emerald-500 hover:bg-emerald-600 text-white" : "text-zinc-500"}
-                          >
-                            <CheckCircle className="w-4 h-4 mr-1.5" />
-                            Present
-                          </Button>
-                          <Button
-                            type="button"
-                            variant={student.status === "ABSENT" ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => handleStatusChange(student.studentId, "ABSENT")}
-                            className={student.status === "ABSENT" ? "bg-rose-500 hover:bg-rose-600 text-white" : "text-zinc-500"}
-                          >
-                            <XCircle className="w-4 h-4 mr-1.5" />
-                            Absent
-                          </Button>
-                          <Button
-                            type="button"
-                            variant={student.status === "LATE" ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => handleStatusChange(student.studentId, "LATE")}
-                            className={student.status === "LATE" ? "bg-amber-500 hover:bg-amber-600 text-white" : "text-zinc-500"}
-                          >
-                            <Clock className="w-4 h-4 mr-1.5" />
-                            Late
-                          </Button>
+                          {STATUS_CONFIG.map(({ status, label, icon: Icon, active, inactive }) => (
+                            <Button
+                              key={status}
+                              type="button"
+                              variant={student.status === status ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => handleStatusChange(student.studentId, status)}
+                              className={student.status === status ? active : inactive}
+                            >
+                              <Icon className="w-4 h-4 mr-1.5" />
+                              {label}
+                            </Button>
+                          ))}
+
+                          {/* Per-student save button (only when already marked) */}
                           {student.isMarked && student.canEdit && (
                             <Button
                               type="button"
@@ -388,7 +393,9 @@ export function TeacherAttendance() {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={3} className="h-32 text-center text-zinc-500">
-                      {!selectedCourseId ? "Please select a class to view students." : "No students found in this class."}
+                      {!selectedCourseId
+                        ? "Please select a class to view students."
+                        : "No students found in this class."}
                     </TableCell>
                   </TableRow>
                 )}
@@ -397,24 +404,39 @@ export function TeacherAttendance() {
           </div>
         </motion.div>
 
-        <motion.div variants={itemVariants} className="flex justify-end pt-2">
-          <Button 
-            size="lg" 
+        {/* ── Action buttons (Update Attendance + Submit Attendance) ── */}
+        <motion.div variants={itemVariants} className="flex flex-col sm:flex-row justify-end gap-3 pt-2">
+          <Button
+            type="button"
+            size="lg"
+            variant="outline"
+            className="w-full sm:w-auto border-indigo-200 text-indigo-600 hover:bg-indigo-50 dark:border-zinc-800 dark:text-indigo-400 dark:hover:bg-zinc-900"
+            onClick={() => {
+              setSelectedPastDate(dateStr);
+              setShowUpdateModal(true);
+            }}
+          >
+            <Calendar className="w-5 h-5 mr-2 text-indigo-500" />
+            Update Attendance
+          </Button>
+
+          <Button
+            size="lg"
             className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-200 dark:shadow-none"
             onClick={handleSubmit}
-            disabled={isSubmittingFullDay || isSubmittingSubject || localAttendance.length === 0}
+            disabled={isSubmitting || localAttendance.length === 0}
           >
-            {isSubmittingFullDay || isSubmittingSubject ? (
+            {isSubmitting ? (
               <Loader2 className="w-5 h-5 mr-2 animate-spin" />
             ) : (
               <Save className="w-5 h-5 mr-2" />
             )}
-            {attendanceMode === "SUBJECT_WISE" ? "Submit Subject Attendance" : "Submit Full Day Attendance"}
+            Submit Attendance
           </Button>
         </motion.div>
       </motion.div>
 
-      {/* Student Attendance History Modal */}
+      {/* ── Student Attendance History Modal ── */}
       <Dialog open={!!historyStudent} onOpenChange={(open) => !open && setHistoryStudent(null)}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
@@ -423,6 +445,7 @@ export function TeacherAttendance() {
               {historyStudent?.name} — Attendance History
             </DialogTitle>
           </DialogHeader>
+
           {historyLoading ? (
             <div className="flex items-center justify-center py-10">
               <Loader2 className="h-6 w-6 animate-spin text-indigo-500" />
@@ -431,29 +454,29 @@ export function TeacherAttendance() {
             <div className="space-y-4">
               {/* Summary cards */}
               <div className="grid grid-cols-4 gap-2">
-                {[
-                  { label: "Present", value: attendanceHistory.summary.present, cls: "bg-emerald-50 text-emerald-700" },
-                  { label: "Absent", value: attendanceHistory.summary.absent, cls: "bg-rose-50 text-rose-700" },
-                  { label: "Late", value: attendanceHistory.summary.late, cls: "bg-amber-50 text-amber-700" },
-                  { label: "Rate", value: `${attendanceHistory.summary.percentage}%`, cls: "bg-indigo-50 text-indigo-700" },
-                ].map((s) => (
+                {historySummaryItems.map((s) => (
                   <Card key={s.label} className={`p-3 text-center border-0 ${s.cls}`}>
                     <p className="text-lg font-bold">{s.value}</p>
                     <p className="text-xs font-medium">{s.label}</p>
                   </Card>
                 ))}
               </div>
+
               {/* Records list */}
               <div className="max-h-72 overflow-y-auto space-y-1.5 pr-1">
                 {attendanceHistory.records.map((r, i) => (
-                  <div key={i} className="flex items-center justify-between text-sm px-3 py-2 rounded-lg bg-zinc-50 border border-zinc-100">
-                    <span className="text-zinc-600">{new Date(r.date).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })}</span>
-                    <Badge variant="outline" className={
-                      r.status === "PRESENT" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
-                      r.status === "ABSENT" ? "bg-rose-50 text-rose-700 border-rose-200" :
-                      r.status === "LATE" ? "bg-amber-50 text-amber-700 border-amber-200" :
-                      "bg-zinc-100 text-zinc-600"
-                    }>
+                  <div
+                    key={i}
+                    className="flex items-center justify-between text-sm px-3 py-2 rounded-lg bg-zinc-50 border border-zinc-100"
+                  >
+                    <span className="text-zinc-600">
+                      {new Date(r.date).toLocaleDateString("en-IN", {
+                        weekday: "short",
+                        day: "numeric",
+                        month: "short",
+                      })}
+                    </span>
+                    <Badge variant="outline" className={statusBadgeClass(r.status)}>
                       {r.status}
                     </Badge>
                   </div>
@@ -461,8 +484,59 @@ export function TeacherAttendance() {
               </div>
             </div>
           ) : (
-            <p className="text-center text-zinc-500 py-8 text-sm">No attendance records found for this student.</p>
+            <p className="text-center text-zinc-500 py-8 text-sm">
+              No attendance records found for this student.
+            </p>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Select Previous Date Modal ── */}
+      <Dialog open={showUpdateModal} onOpenChange={setShowUpdateModal}>
+        <DialogContent className="max-w-md bg-white dark:bg-zinc-950 p-6 rounded-xl shadow-xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg font-bold text-slate-800 dark:text-white">
+              <Calendar className="h-5 w-5 text-indigo-600" />
+              Update Past Attendance
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-3">
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              Select a date to view and update the student attendance records for that day.
+            </p>
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                Select Date
+              </label>
+              <Input
+                type="date"
+                max={todayStr}
+                value={selectedPastDate}
+                onChange={(e) => setSelectedPastDate(e.target.value)}
+                className="w-full"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-zinc-800">
+            <Button variant="outline" size="sm" onClick={() => setShowUpdateModal(false)}>
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white"
+              onClick={() => {
+                if (!selectedPastDate) {
+                  toast.error("Please select a valid date.");
+                  return;
+                }
+                setDateStr(selectedPastDate);
+                setShowUpdateModal(false);
+                toast.info(`Loaded attendance records for ${selectedPastDate}`);
+              }}
+            >
+              Load Records
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

@@ -70,7 +70,7 @@ export function useUpdateStudentAttendance() {
     mutationFn: async (data: {
       courseId: string;
       rollNumber: string;
-      status: "PRESENT" | "ABSENT" | "LATE";
+      status: "PRESENT" | "ABSENT" | "LEAVE";
       date: string;
     }) => {
       const res = await fetchWithAuth(
@@ -123,7 +123,7 @@ export function useStudentAttendanceHistory(
           total: 1,
           present: isPresent ? 1 : 0,
           absent: res.status === "ABSENT" ? 1 : 0,
-          late: res.status === "LATE" ? 1 : 0,
+          leave: res.status === "LEAVE" ? 1 : 0,
           percentage: isPresent ? 100 : 0,
         }
       } as StudentAttendanceHistory;

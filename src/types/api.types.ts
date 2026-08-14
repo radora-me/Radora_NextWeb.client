@@ -114,7 +114,7 @@ export interface StudentAttendanceRecord {
     studentId: string;
     name: string;
     rollNumber: string;
-    status: "PRESENT" | "ABSENT" | "LATE" | "HALF_DAY";
+    status: "PRESENT" | "ABSENT" | "LEAVE";
     isMarked: boolean;
     canEdit: boolean;
     createdAt: string | null;
@@ -131,14 +131,14 @@ export interface StudentAttendanceHistory {
     name: string;
     records: {
         date: string;
-        status: "PRESENT" | "ABSENT" | "LATE" | "HALF_DAY";
+        status: "PRESENT" | "ABSENT" | "LEAVE";
         markedBy: string | null;
         }[];
     summary: {
         total: number;
         present: number;
         absent: number;
-        late: number;
+        leave: number;
         percentage: number;
         };
 }
@@ -559,10 +559,21 @@ export interface ClassTimetable {
 export interface StudentProfileData {
   id: string;
   name: string;
+  rollNumber?: string;
+  className?: string;
+  profilePhotoUrl?: string | null;
   status?: string;
-  phone?: string;
-  address?: string;
-  bloodGroup?: string;
-  guardianName?: string;
-  guardianPhone?: string;
+  // StudentProfile sub-document fields (Prisma model)
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  pincode?: string | null;
+  parentName?: string | null;
+  parentEmail?: string | null;
+  parentPhone?: string | null;
+  parentRelation?: string | null;
+  dateOfBirth?: string | null;
+  bloodGroup?: string | null;
+  emergencyPhone?: string | null;
 }
+

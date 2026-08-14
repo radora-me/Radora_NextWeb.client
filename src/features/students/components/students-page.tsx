@@ -186,7 +186,7 @@ export function StudentsPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <Link href={`/students/${student.id}`}>
+                      <Link href={`/students/${encodeURIComponent(student.rollNumber)}`}>
                         <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">
                           <Eye className="h-3.5 w-3.5 mr-1" />
                           View

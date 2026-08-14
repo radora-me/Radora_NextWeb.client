@@ -1,20 +1,63 @@
+"use client";
+
 import { useState, useEffect } from "react";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, User, Phone, MapPin, HeartPulse, Edit2, Save, X } from "lucide-react";
-import { 
-  useTeacherDeepStudentProfile, 
-  useUpdateStudentProfile 
+import {
+  Loader2, User, Phone, MapPin, HeartPulse, Edit2, Save, X,
+  UserCircle, GraduationCap, Hash,
+} from "lucide-react";
+import {
+  useTeacherDeepStudentProfile,
+  useUpdateStudentProfile,
 } from "@/features/students/services";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
+function InfoRow({ label, value }: { label: string; value?: string | null }) {
+  return (
+    <div className="space-y-0.5">
+      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">{label}</p>
+      <p className="text-sm font-medium text-slate-800">{value || "—"}</p>
+    </div>
+  );
+}
+
+function EditField({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-xs font-medium text-slate-600">{label}</Label>
+      <Input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder || label}
+        className="h-8 text-sm"
+      />
+    </div>
+  );
+}
+
+function getInitials(name: string) {
+  return name.split(" ").map((n) => n[0]).join("").toUpperCase().substring(0, 2);
+}
 
 export function TeacherStudentProfileModal({
   rollNumber,
@@ -29,22 +72,55 @@ export function TeacherStudentProfileModal({
   const { mutate: updateProfile, isPending: isUpdating } = useUpdateStudentProfile();
   const [isEditing, setIsEditing] = useState(false);
 
-  // Form state
-  const [phone, setPhone] = useState("");
-  const [address, setAddress] = useState("");
-  const [bloodGroup, setBloodGroup] = useState("");
-  const [guardianName, setGuardianName] = useState("");
-  const [guardianPhone, setGuardianPhone] = useState("");
+  // ── Form state (uses backend field names) ──
+  const [address, setAddress]           = useState("");
+  const [city, setCity]                 = useState("");
+  const [state, setState]               = useState("");
+  const [pincode, setPincode]           = useState("");
+  const [parentName, setParentName]     = useState("");
+  const [parentPhone, setParentPhone]   = useState("");
+  const [parentEmail, setParentEmail]   = useState("");
+  const [parentRelation, setParentRelation] = useState("");
+  const [bloodGroup, setBloodGroup]     = useState("");
+  const [emergencyPhone, setEmergencyPhone] = useState("");
 
+  // Populate form when profile loads (and reset on close/cancel)
   useEffect(() => {
     if (profile && !isEditing) {
-      setPhone(profile.phone || "");
       setAddress(profile.address || "");
+      setCity(profile.city || "");
+      setState(profile.state || "");
+      setPincode(profile.pincode || "");
+      setParentName(profile.parentName || "");
+      setParentPhone(profile.parentPhone || "");
+      setParentEmail(profile.parentEmail || "");
+      setParentRelation(profile.parentRelation || "");
       setBloodGroup(profile.bloodGroup || "");
-      setGuardianName(profile.guardianName || "");
-      setGuardianPhone(profile.guardianPhone || "");
+      setEmergencyPhone(profile.emergencyPhone || "");
     }
   }, [profile, isEditing]);
+
+  // Reset editing state when modal closes
+  useEffect(() => {
+    if (!open) setIsEditing(false);
+  }, [open]);
+
+  const handleCancel = () => {
+    setIsEditing(false);
+    // re-populate from cached profile
+    if (profile) {
+      setAddress(profile.address || "");
+      setCity(profile.city || "");
+      setState(profile.state || "");
+      setPincode(profile.pincode || "");
+      setParentName(profile.parentName || "");
+      setParentPhone(profile.parentPhone || "");
+      setParentEmail(profile.parentEmail || "");
+      setParentRelation(profile.parentRelation || "");
+      setBloodGroup(profile.bloodGroup || "");
+      setEmergencyPhone(profile.emergencyPhone || "");
+    }
+  };
 
   const handleSave = () => {
     if (!rollNumber) return;
@@ -52,11 +128,16 @@ export function TeacherStudentProfileModal({
       {
         rollNumber,
         data: {
-          phone,
-          address,
-          bloodGroup,
-          guardianName,
-          guardianPhone,
+          address: address || null,
+          city: city || null,
+          state: state || null,
+          pincode: pincode || null,
+          parentName: parentName || null,
+          parentPhone: parentPhone || null,
+          parentEmail: parentEmail || null,
+          parentRelation: parentRelation || null,
+          bloodGroup: bloodGroup || null,
+          emergencyPhone: emergencyPhone || null,
         },
       },
       {
@@ -73,133 +154,161 @@ export function TeacherStudentProfileModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md bg-white p-0 overflow-hidden shadow-xl rounded-xl">
-        <DialogHeader className="p-6 pb-0 border-b border-slate-100 bg-slate-50/50">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="h-12 w-12 rounded-full bg-indigo-100 flex items-center justify-center border-2 border-indigo-200">
-                <User className="h-6 w-6 text-indigo-600" />
-              </div>
+      <DialogContent className="max-w-lg bg-white p-0 overflow-hidden shadow-2xl rounded-2xl">
+        {/* ── Header ── */}
+        <DialogHeader className="p-5 pb-4 border-b border-slate-100 bg-gradient-to-r from-indigo-50 to-purple-50">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Avatar className="h-12 w-12 ring-2 ring-white shadow-sm">
+                <AvatarImage src={profile?.profilePhotoUrl || ""} />
+                <AvatarFallback className="bg-gradient-to-br from-indigo-400 to-purple-500 text-white font-bold text-sm">
+                  {profile?.name ? getInitials(profile.name) : <UserCircle className="h-5 w-5" />}
+                </AvatarFallback>
+              </Avatar>
               <div>
-                <DialogTitle className="text-lg font-bold text-slate-800">
+                <DialogTitle className="text-base font-bold text-slate-900">
                   {profile?.name || "Student Profile"}
                 </DialogTitle>
-                <div className="flex items-center gap-2 mt-1">
-                  <Badge variant="outline" className="text-xs font-semibold bg-white border-slate-200">
-                    Roll No: {rollNumber}
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                  <Badge variant="outline" className="text-[10px] font-semibold bg-white border-slate-200 gap-1">
+                    <Hash className="h-2.5 w-2.5" />{rollNumber}
                   </Badge>
-                  {profile?.status && (
-                    <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] uppercase">
-                      {profile.status}
+                  {profile?.className && (
+                    <Badge variant="outline" className="text-[10px] bg-indigo-50 text-indigo-700 border-indigo-200 gap-1">
+                      <GraduationCap className="h-2.5 w-2.5" />Class {profile.className}
                     </Badge>
                   )}
                 </div>
               </div>
             </div>
+
             {!isLoading && !isError && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsEditing(!isEditing)}
-                className={isEditing ? "text-slate-500 hover:text-slate-700 bg-slate-100" : "text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"}
-              >
-                {isEditing ? (
-                  <>
-                    <X className="h-4 w-4 mr-1.5" /> Cancel
-                  </>
-                ) : (
-                  <>
-                    <Edit2 className="h-4 w-4 mr-1.5" /> Edit
-                  </>
-                )}
-              </Button>
+              isEditing ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleCancel}
+                  className="text-slate-500 hover:text-slate-700 hover:bg-slate-100 shrink-0"
+                >
+                  <X className="h-4 w-4 mr-1.5" /> Cancel
+                </Button>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsEditing(true)}
+                  className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 shrink-0"
+                >
+                  <Edit2 className="h-4 w-4 mr-1.5" /> Edit
+                </Button>
+              )
             )}
           </div>
         </DialogHeader>
 
-        <div className="p-6">
+        {/* ── Body ── */}
+        <div className="p-5 max-h-[60vh] overflow-y-auto">
           {isLoading ? (
             <div className="flex items-center justify-center h-40">
               <Loader2 className="h-6 w-6 animate-spin text-indigo-500" />
             </div>
           ) : isError ? (
-            <div className="flex items-center justify-center h-40 text-red-500 text-sm">
-              Failed to load profile data.
+            <div className="flex flex-col items-center justify-center h-40 text-red-500 text-sm gap-2">
+              <p className="font-medium">Failed to load profile data.</p>
+              <p className="text-xs text-slate-400">Check your connection and try again.</p>
             </div>
           ) : (
-            <div className="space-y-5">
-              {/* Personal Info */}
-              <div className="space-y-4">
-                <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Personal Information</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-medium flex items-center gap-1.5 text-slate-600">
-                      <Phone className="h-3.5 w-3.5 text-indigo-400" /> Phone
-                    </Label>
-                    {isEditing ? (
-                      <Input value={phone} onChange={(e) => setPhone(e.target.value)} className="h-8 text-sm" />
-                    ) : (
-                      <div className="text-sm font-medium text-slate-800">{phone || "Not provided"}</div>
-                    )}
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-medium flex items-center gap-1.5 text-slate-600">
-                      <HeartPulse className="h-3.5 w-3.5 text-indigo-400" /> Blood Group
-                    </Label>
-                    {isEditing ? (
-                      <Input value={bloodGroup} onChange={(e) => setBloodGroup(e.target.value)} className="h-8 text-sm" />
-                    ) : (
-                      <div className="text-sm font-medium text-slate-800">{bloodGroup || "Not provided"}</div>
-                    )}
-                  </div>
-                </div>
+            <div className="space-y-6">
 
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium flex items-center gap-1.5 text-slate-600">
-                    <MapPin className="h-3.5 w-3.5 text-indigo-400" /> Address
-                  </Label>
+              {/* ── Health Info ── */}
+              <section className="space-y-3">
+                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                  <HeartPulse className="h-3 w-3 text-rose-400" /> Health
+                </h4>
+                <div className="grid grid-cols-2 gap-4">
                   {isEditing ? (
-                    <Input value={address} onChange={(e) => setAddress(e.target.value)} className="h-8 text-sm" />
+                    <>
+                      <EditField label="Blood Group" value={bloodGroup} onChange={setBloodGroup} placeholder="e.g. B+" />
+                      <EditField label="Emergency Phone" value={emergencyPhone} onChange={setEmergencyPhone} placeholder="+91 XXXXX" />
+                    </>
                   ) : (
-                    <div className="text-sm font-medium text-slate-800 break-words">{address || "Not provided"}</div>
+                    <>
+                      <InfoRow label="Blood Group" value={bloodGroup} />
+                      <InfoRow label="Emergency Phone" value={emergencyPhone} />
+                    </>
                   )}
                 </div>
-              </div>
+              </section>
 
-              {/* Guardian Info */}
-              <div className="space-y-4 pt-4 border-t border-slate-100">
-                <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Guardian Details</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-medium text-slate-600">Guardian Name</Label>
-                    {isEditing ? (
-                      <Input value={guardianName} onChange={(e) => setGuardianName(e.target.value)} className="h-8 text-sm" />
-                    ) : (
-                      <div className="text-sm font-medium text-slate-800">{guardianName || "Not provided"}</div>
-                    )}
+              {/* ── Address ── */}
+              <section className="space-y-3 pt-4 border-t border-slate-100">
+                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                  <MapPin className="h-3 w-3 text-indigo-400" /> Address
+                </h4>
+                {isEditing ? (
+                  <div className="space-y-3">
+                    <EditField label="Street Address" value={address} onChange={setAddress} placeholder="e.g. 123 MG Road" />
+                    <div className="grid grid-cols-2 gap-3">
+                      <EditField label="City" value={city} onChange={setCity} placeholder="Mumbai" />
+                      <EditField label="State" value={state} onChange={setState} placeholder="Maharashtra" />
+                    </div>
+                    <EditField label="Pincode" value={pincode} onChange={setPincode} placeholder="400001" />
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-medium text-slate-600">Guardian Phone</Label>
-                    {isEditing ? (
-                      <Input value={guardianPhone} onChange={(e) => setGuardianPhone(e.target.value)} className="h-8 text-sm" />
-                    ) : (
-                      <div className="text-sm font-medium text-slate-800">{guardianPhone || "Not provided"}</div>
-                    )}
+                ) : (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="col-span-2"><InfoRow label="Street Address" value={address} /></div>
+                    <InfoRow label="City" value={city} />
+                    <InfoRow label="State" value={state} />
+                    <InfoRow label="Pincode" value={pincode} />
                   </div>
-                </div>
-              </div>
-            </div>
-          )}
+                )}
+              </section>
 
-          {isEditing && (
-            <div className="mt-6 flex justify-end">
-              <Button onClick={handleSave} disabled={isUpdating} className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700">
-                {isUpdating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-                Save Changes
-              </Button>
+              {/* ── Guardian / Parent ── */}
+              <section className="space-y-3 pt-4 border-t border-slate-100">
+                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                  <User className="h-3 w-3 text-emerald-400" /> Guardian Details
+                </h4>
+                {isEditing ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    <EditField label="Parent / Guardian Name" value={parentName} onChange={setParentName} placeholder="Full name" />
+                    <EditField label="Relation" value={parentRelation} onChange={setParentRelation} placeholder="e.g. Father" />
+                    <EditField label="Phone" value={parentPhone} onChange={setParentPhone} placeholder="+91 XXXXX" />
+                    <EditField label="Email" value={parentEmail} onChange={setParentEmail} placeholder="parent@email.com" />
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-4">
+                    <InfoRow label="Name" value={parentName} />
+                    <InfoRow label="Relation" value={parentRelation} />
+                    <InfoRow label="Phone" value={parentPhone} />
+                    <InfoRow label="Email" value={parentEmail} />
+                  </div>
+                )}
+              </section>
             </div>
           )}
         </div>
+
+        {/* ── Save Footer ── */}
+        {isEditing && (
+          <div className="px-5 py-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-2">
+            <Button variant="outline" size="sm" onClick={handleCancel} disabled={isUpdating}>
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleSave}
+              disabled={isUpdating}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white"
+            >
+              {isUpdating ? (
+                <><Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />Saving…</>
+              ) : (
+                <><Save className="h-3.5 w-3.5 mr-2" />Save Changes</>
+              )}
+            </Button>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Eye, MessageSquare, Loader2, RefreshCw, UserPlus, Users, GraduationCap } from "lucide-react";
 import dynamic from "next/dynamic";
@@ -46,6 +47,7 @@ const AddStudentModal = dynamic(
 import { TeacherStudentProfileModal } from "./teacher-student-profile-modal";
 
 export function TeacherStudents() {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [classFilter, setClassFilter] = useState("all");
   const [showAddModal, setShowAddModal] = useState(false);
@@ -289,7 +291,15 @@ export function TeacherStudents() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-8 px-2 text-slate-600 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400"
+                              className="h-8 px-2 text-slate-600 hover:text-emerald-600 dark:text-slate-400 dark:hover:text-emerald-400"
+                              title="Open classroom chat"
+                              onClick={() => {
+                                const courseId = student.courses?.[0]?.id;
+                                const url = courseId
+                                  ? `/teacher-chat?roomId=${courseId}`
+                                  : "/teacher-chat";
+                                router.push(url);
+                              }}
                             >
                               <MessageSquare className="h-4 w-4 mr-1.5" />
                               <span className="hidden sm:inline">Message</span>
