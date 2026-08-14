@@ -7,19 +7,15 @@ import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft, Pencil, Mail, Phone, MapPin, Calendar, Briefcase, Loader2,
-  BookOpen, Plus, GraduationCap, CheckCircle2, Save, X, AlertCircle,
+  BookOpen, Plus, GraduationCap, CheckCircle2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useAdminTeacher, useUpdateAdminTeacher } from "@/features/admin/services/admin.service";
-import { toast } from "sonner";
+import { mockTeachers } from "@/features/teachers/data/mock-teachers";
 
 const AssignClassModal = dynamic(
   () => import("./assign-class-modal").then((m) => m.AssignClassModal),
@@ -33,7 +29,13 @@ const AssignClassModal = dynamic(
   }
 );
 
-function InfoField({ label, value }: { label: string; value?: string | null }) {
+const statusStyles: Record<string, string> = {
+  active: "bg-emerald-100 text-emerald-700 border-emerald-200",
+  "on-leave": "bg-amber-100 text-amber-700 border-amber-200",
+  inactive: "bg-gray-100 text-gray-600 border-gray-200",
+};
+
+function InfoField({ label, value }: { label: string; value?: string }) {
   return (
     <div className="space-y-1">
       <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{label}</p>
@@ -44,86 +46,38 @@ function InfoField({ label, value }: { label: string; value?: string | null }) {
 
 export function TeacherProfilePage() {
   const params = useParams();
-  const teacherId = params.id as string;
+  const [teacher, setTeacher] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const [showAssignModal, setShowAssignModal] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
 
-  // Form state for editing
-  const [editName, setEditName] = useState("");
-  const [editEmail, setEditEmail] = useState("");
-  const [editAddress, setEditAddress] = useState("");
+  const loadTeacher = () => {
+    const stored = localStorage.getItem("radora_teachers");
+    const list = stored ? JSON.parse(stored) : mockTeachers;
+    const found = list.find((t: any) => t.id === params.id);
+    setTeacher(found || null);
+    setLoading(false);
+  };
 
-  const {
-    data: teacher,
-    isLoading,
-    isError,
-    refetch,
-  } = useAdminTeacher(teacherId || null);
-
-  const { mutate: updateTeacher, isPending: isUpdating } = useUpdateAdminTeacher();
-
-  // Sync form state when teacher data loads
   useEffect(() => {
-    if (teacher && !isEditing) {
-      setEditName(teacher.name || "");
-      setEditEmail(teacher.email || "");
-      setEditAddress(teacher.address || "");
-    }
-  }, [teacher, isEditing]);
+    loadTeacher();
+    // Refresh when assignment is made
+    window.addEventListener("storage", loadTeacher);
+    return () => window.removeEventListener("storage", loadTeacher);
+  }, [params.id]);
 
-  const handleSave = () => {
-    if (!teacherId) return;
-    updateTeacher(
-      { teacherId, name: editName, email: editEmail, address: editAddress },
-      {
-        onSuccess: () => {
-          toast.success("Teacher profile updated successfully!");
-          setIsEditing(false);
-          refetch();
-        },
-        onError: (err: any) => {
-          toast.error(err.message || "Failed to update teacher profile.");
-        },
-      }
-    );
-  };
-
-  const handleCancelEdit = () => {
-    if (teacher) {
-      setEditName(teacher.name || "");
-      setEditEmail(teacher.email || "");
-      setEditAddress(teacher.address || "");
-    }
-    setIsEditing(false);
-  };
-
-  if (isLoading) {
+  if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Skeleton className="h-8 w-8 rounded-full" />
-          <Skeleton className="h-16 w-16 rounded-full" />
-          <div className="space-y-2">
-            <Skeleton className="h-7 w-48" />
-            <Skeleton className="h-4 w-64" />
-          </div>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-20 rounded-xl" />
-          ))}
-        </div>
-        <Skeleton className="h-64 rounded-xl" />
+      <div className="flex h-[40vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
       </div>
     );
   }
 
-  if (isError || !teacher) {
+  if (!teacher) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 space-y-4 text-red-500">
-        <AlertCircle className="h-12 w-12" />
+      <div className="flex flex-col items-center justify-center py-20 space-y-4">
         <h2 className="text-xl font-semibold">Teacher Not Found</h2>
-        <p className="text-muted-foreground text-sm">Could not load teacher data from the server.</p>
+        <p className="text-muted-foreground">The teacher you&apos;re looking for doesn&apos;t exist.</p>
         <Link href="/teachers">
           <Button variant="outline">
             <ArrowLeft className="mr-2 h-4 w-4" /> Back to Teachers
@@ -133,7 +87,7 @@ export function TeacherProfilePage() {
     );
   }
 
-  const courses = teacher.courses || [];
+  const courses: any[] = teacher.courses || [];
 
   return (
     <>
@@ -143,7 +97,7 @@ export function TeacherProfilePage() {
             teacherEmail={teacher.email}
             onClose={() => {
               setShowAssignModal(false);
-              refetch();
+              loadTeacher();
             }}
           />
         )}
@@ -156,7 +110,7 @@ export function TeacherProfilePage() {
         className="space-y-6"
       >
         {/* Header */}
-        <div className="flex items-start justify-between flex-wrap gap-4">
+        <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
             <Link href="/teachers">
               <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -165,19 +119,23 @@ export function TeacherProfilePage() {
             </Link>
             <Avatar className="h-16 w-16">
               <AvatarFallback className="bg-gradient-to-br from-purple-400 to-purple-600 text-white text-lg font-bold">
-                {teacher.name?.split(" ").map((n) => n[0]).join("").toUpperCase().substring(0, 2) || "TC"}
+                {(teacher.firstName?.[0] || teacher.name?.[0] || "T").toUpperCase()}
+                {(teacher.lastName?.[0] || "").toUpperCase()}
               </AvatarFallback>
             </Avatar>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-bold">{teacher.name}</h1>
-                <Badge variant="outline" className="bg-emerald-100 text-emerald-700 border-emerald-200">
-                  Active
+                <h1 className="text-2xl font-bold">
+                  {teacher.firstName || teacher.name} {teacher.lastName || ""}
+                </h1>
+                <Badge variant="outline" className={statusStyles[teacher.status]}>
+                  {teacher.status}
                 </Badge>
               </div>
-              <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground flex-wrap">
-                <span className="flex items-center gap-1"><Mail className="h-3.5 w-3.5" />{teacher.email}</span>
-                <span>ID: {teacher.id.substring(0, 8).toUpperCase()}</span>
+              <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
+                <span>{teacher.department}</span>
+                <span>{teacher.subject}</span>
+                <span>ID: {teacher.id}</span>
               </div>
             </div>
           </div>
@@ -191,45 +149,14 @@ export function TeacherProfilePage() {
               <BookOpen className="mr-2 h-3.5 w-3.5" />
               Assign Class
             </Button>
-            {isEditing ? (
-              <>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="text-slate-500"
-                  onClick={handleCancelEdit}
-                  disabled={isUpdating}
-                >
-                  <X className="mr-1.5 h-3.5 w-3.5" /> Cancel
-                </Button>
-                <Button
-                  size="sm"
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white"
-                  onClick={handleSave}
-                  disabled={isUpdating}
-                >
-                  {isUpdating ? (
-                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Save className="mr-1.5 h-3.5 w-3.5" />
-                  )}
-                  Save Changes
-                </Button>
-              </>
-            ) : (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsEditing(true)}
-              >
-                <Pencil className="mr-2 h-3.5 w-3.5" /> Edit Profile
-              </Button>
-            )}
+            <Button variant="outline" size="sm">
+              <Pencil className="mr-2 h-3.5 w-3.5" /> Edit Profile
+            </Button>
           </div>
         </div>
 
         {/* Quick Info Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
           <Card className="p-4">
             <div className="flex items-center gap-3">
               <div className="rounded-lg bg-blue-50 p-2">
@@ -244,7 +171,33 @@ export function TeacherProfilePage() {
           <Card className="p-4">
             <div className="flex items-center gap-3">
               <div className="rounded-lg bg-emerald-50 p-2">
-                <GraduationCap className="h-4 w-4 text-emerald-600" />
+                <Phone className="h-4 w-4 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Phone</p>
+                <p className="text-sm font-medium">{teacher.phone || "—"}</p>
+              </div>
+            </div>
+          </Card>
+          <Card className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg bg-amber-50 p-2">
+                <Calendar className="h-4 w-4 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Joined</p>
+                <p className="text-sm font-medium">
+                  {teacher.joiningDate
+                    ? new Date(teacher.joiningDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
+                    : "—"}
+                </p>
+              </div>
+            </div>
+          </Card>
+          <Card className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg bg-purple-50 p-2">
+                <GraduationCap className="h-4 w-4 text-purple-600" />
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Classes Assigned</p>
@@ -252,23 +205,14 @@ export function TeacherProfilePage() {
               </div>
             </div>
           </Card>
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-indigo-50 p-2">
-                <MapPin className="h-4 w-4 text-indigo-600" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs text-muted-foreground">Address</p>
-                <p className="text-sm font-medium truncate">{teacher.address || "—"}</p>
-              </div>
-            </div>
-          </Card>
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="personal" className="space-y-4">
+        <Tabs defaultValue="classes" className="space-y-4">
           <TabsList>
             <TabsTrigger value="personal">Personal Info</TabsTrigger>
+            <TabsTrigger value="qualifications">Qualifications</TabsTrigger>
+            <TabsTrigger value="schedule">Schedule</TabsTrigger>
             <TabsTrigger value="classes">
               Assigned Classes
               {courses.length > 0 && (
@@ -281,59 +225,56 @@ export function TeacherProfilePage() {
 
           <TabsContent value="personal">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-base">
-                  {isEditing ? "✏️ Editing Teacher Profile" : "Personal Information"}
-                </CardTitle>
+              <CardHeader>
+                <CardTitle className="text-base">Personal Information</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                {isEditing ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="teacher-name" className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                        Full Name *
-                      </Label>
-                      <Input
-                        id="teacher-name"
-                        value={editName}
-                        onChange={(e) => setEditName(e.target.value)}
-                        placeholder="Teacher's full name"
-                        className="focus-visible:ring-indigo-500"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="teacher-email" className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                        Email Address *
-                      </Label>
-                      <Input
-                        id="teacher-email"
-                        type="email"
-                        value={editEmail}
-                        onChange={(e) => setEditEmail(e.target.value)}
-                        placeholder="teacher@school.com"
-                        className="focus-visible:ring-indigo-500"
-                      />
-                    </div>
-                    <div className="space-y-1.5 sm:col-span-2">
-                      <Label htmlFor="teacher-address" className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                        Address
-                      </Label>
-                      <Input
-                        id="teacher-address"
-                        value={editAddress}
-                        onChange={(e) => setEditAddress(e.target.value)}
-                        placeholder="Full address"
-                        className="focus-visible:ring-indigo-500"
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <InfoField label="Full Name" value={teacher.name} />
-                    <InfoField label="Email Address" value={teacher.email} />
-                    <InfoField label="Address" value={teacher.address} />
-                  </div>
-                )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <InfoField label="First Name" value={teacher.firstName || teacher.name} />
+                  <InfoField label="Last Name" value={teacher.lastName || ""} />
+                  <InfoField label="Date of Birth" value={teacher.dateOfBirth ? new Date(teacher.dateOfBirth).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" }) : "—"} />
+                  <InfoField label="Gender" value={teacher.gender ? (teacher.gender.charAt(0).toUpperCase() + teacher.gender.slice(1)) : "—"} />
+                  <InfoField label="Department" value={teacher.department} />
+                  <InfoField label="Subject" value={teacher.subject} />
+                  <InfoField label="Salary" value={teacher.salary} />
+                </div>
+
+                <Separator />
+
+                <div>
+                  <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                    Address
+                  </h3>
+                  <p className="text-sm">{teacher.address || "—"}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="qualifications">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Qualifications</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <InfoField label="Qualification" value={teacher.qualification} />
+                  <InfoField label="Experience" value={teacher.experience} />
+                  <InfoField label="Department" value={teacher.department} />
+                  <InfoField label="Specialization" value={teacher.subject} />
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="schedule">
+            <Card className="flex items-center justify-center py-16">
+              <CardContent className="text-center space-y-2">
+                <p className="text-lg font-semibold">Teaching Schedule</p>
+                <p className="text-sm text-muted-foreground">
+                  Weekly timetable and class assignments will appear here.
+                </p>
               </CardContent>
             </Card>
           </TabsContent>
@@ -377,38 +318,33 @@ export function TeacherProfilePage() {
                   </motion.div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {courses.map((course, index) => {
-                      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(course.title?.trim() ?? "");
-                      const label = isUUID
-                        ? `Class${course.description ? ` — Section ${course.description}` : ""}`
-                        : `${course.title}${course.description ? ` — Section ${course.description}` : ""}`;
-                      return (
-                        <motion.div
-                          key={course.id || index}
-                          initial={{ opacity: 0, y: 8 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: index * 0.05 }}
-                        >
-                          <div className="rounded-xl border bg-gradient-to-br from-indigo-50 to-white p-4 space-y-3 hover:shadow-md transition-shadow">
-                            <div className="flex items-start justify-between">
-                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-100">
-                                <GraduationCap className="h-5 w-5 text-indigo-600" />
-                              </div>
-                              <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-[10px]">
-                                <CheckCircle2 className="mr-1 h-3 w-3" />
-                                Active
-                              </Badge>
+                    {courses.map((course: any, index: number) => (
+                      <motion.div
+                        key={course.id || index}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                      >
+                        <div className="rounded-xl border bg-gradient-to-br from-indigo-50 to-white p-4 space-y-3 hover:shadow-md transition-shadow">
+                          <div className="flex items-start justify-between">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-100">
+                              <GraduationCap className="h-5 w-5 text-indigo-600" />
                             </div>
-                            <div>
-                              <p className="font-semibold text-slate-900 text-sm">{label}</p>
-                              <p className="text-xs text-muted-foreground mt-0.5">
-                                {course._count?.enrollments ?? 0} student{(course._count?.enrollments ?? 0) !== 1 ? "s" : ""} enrolled
-                              </p>
-                            </div>
+                            <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-[10px]">
+                              <CheckCircle2 className="mr-1 h-3 w-3" />
+                              Active
+                            </Badge>
                           </div>
-                        </motion.div>
-                      );
-                    })}
+                          <div>
+                            <p className="font-semibold text-slate-900 text-sm">{course.title}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {course.description ? `Section ${course.description}` : ""}
+                            </p>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))}
+                    {/* Add another class card */}
                     <motion.div
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}

@@ -1,7 +1,16 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchWithAuth } from "@/lib/api-client";
-import { CreateTeacherPayload } from "@/types/api.types";
-import { CreateTeacherResponse } from "@/types/api.types";
+
+export interface CreateTeacherPayload {
+  name: string;
+  email: string;
+  password: string;
+}
+
+export interface CreateTeacherResponse {
+  message: string;
+  userId: string;
+}
 
 export function useCreateTeacher() {
   const queryClient = useQueryClient();

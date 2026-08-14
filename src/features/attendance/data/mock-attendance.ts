@@ -1,10 +1,32 @@
 import type { Student } from "@/types";
-import { AttendanceRecord } from "@/types/api.types";
-import { DailyAttendance } from "@/types/api.types";
-import { AttendanceSummary } from "@/types/api.types";
 
 // Attendance record for a single student on a given day
+export interface AttendanceRecord {
+  studentId: string;
+  studentName: string;
+  rollNumber: string;
+  status: "present" | "absent" | "late" | "excused";
+}
+
+export interface DailyAttendance {
+  date: string;
+  class: string;
+  section: string;
+  records: AttendanceRecord[];
+  presentCount: number;
+  absentCount: number;
+  lateCount: number;
+}
+
 // Monthly summary per class
+export interface AttendanceSummary {
+  class: string;
+  section: string;
+  totalStudents: number;
+  avgAttendance: number;
+  month: string;
+}
+
 // Generate attendance records for a class
 function generateRecords(className: string, section: string): AttendanceRecord[] {
   const names: Record<string, string[]> = {

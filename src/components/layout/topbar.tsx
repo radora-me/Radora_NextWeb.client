@@ -2,7 +2,6 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { Bell, Search } from "lucide-react";
-import { GlobalSearch } from "./global-search";
 import { useAuth } from "@/features/auth/context/auth-context";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
@@ -55,14 +54,14 @@ export function Topbar() {
     else router.push("/dashboard");
   };
 
-  const handleNotifications = () => {
-    if (user?.role === "teacher") router.push("/teacher-notifications");
-    else if (user?.role === "student") router.push("/student-notifications");
-    else router.push("/notifications");
+  const handleSettings = () => {
+    if (user?.role === "admin") router.push("/settings");
+    else if (user?.role === "teacher") router.push("/teacher-dashboard");
+    else router.push("/student-dashboard");
   };
 
   return (
-    <header suppressHydrationWarning className="flex h-14 items-center gap-3 border-b bg-background/95 backdrop-blur-sm px-4">
+    <header className="flex h-14 items-center gap-3 border-b bg-background/95 backdrop-blur-sm px-4">
       <SidebarTrigger className="-ml-1 h-8 w-8 text-muted-foreground" />
       <Separator orientation="vertical" className="h-5" />
       <div className="flex items-center gap-1.5 text-sm">
@@ -71,17 +70,16 @@ export function Topbar() {
         <span className="font-medium">{breadcrumb}</span>
       </div>
       <div className="ml-auto flex items-center gap-2">
-        <div className="hidden md:block">
-          <GlobalSearch />
+        <div className="relative hidden md:block">
+          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Search..."
+            className="h-8 w-56 pl-8 text-xs bg-muted/50 border-0 focus-visible:ring-1"
+          />
         </div>
 
-        <Button
-          variant="ghost"
-          size="icon"
-          className="relative h-8 w-8 cursor-pointer"
-          onClick={handleNotifications}
-          title="Open Notice Board / Notifications"
-        >
+        <Button variant="ghost" size="icon" className="relative h-8 w-8">
           <Bell className="h-4 w-4 text-muted-foreground" />
           <Badge className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full p-0 flex items-center justify-center text-[9px] bg-indigo-600 text-white border-2 border-background">
             3
@@ -113,6 +111,9 @@ export function Topbar() {
             <DropdownMenuSeparator />
             <DropdownMenuItem className="cursor-pointer" onClick={handleProfile}>
               Profile
+            </DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer" onClick={handleSettings}>
+              Settings
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem 

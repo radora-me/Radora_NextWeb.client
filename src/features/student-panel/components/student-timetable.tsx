@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { classTimetables, periodTimings, weekDays } from "@/features/timetable/data/mock-timetable";
-import type { TimetableSlot } from "@/types/api.types";
+import type { TimetableSlot } from "@/features/timetable/data/mock-timetable";
 
 const containerVariants = {
   hidden: { opacity: 0 },

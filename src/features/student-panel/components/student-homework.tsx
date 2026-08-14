@@ -26,32 +26,26 @@ import {
   UploadCloud,
   Trash2
 } from "lucide-react";
-import { useStudentHomework, useStudentHomeworkDetail, useStudentSubmission, useSubmitHomework } from "@/features/homework/services";
-import type { StudentHomework as StudentHomeworkType } from "@/types/api.types";
-import { downloadFileWithAuth } from "@/lib/api-client";
+import { useStudentHomework, StudentHomework as StudentHomeworkType } from "@/features/homework/services";
 import { useAuth } from "@/features/auth/context/auth-context";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
-interface LocalAttachment {
-  fileName: string;
-  size: number;
-  mimeType: string;
-  base64: string;
-}
-
+// Helper to convert File to Base64 (just for local storage mock preview)
 const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
-    reader.onload = () => {
-      const result = reader.result as string;
-      const base64 = result.split(",")[1];
-      resolve(base64);
-    };
+    reader.onload = () => resolve(reader.result as string);
     reader.onerror = (error) => reject(error);
   });
 };
+
+interface LocalAttachment {
+  name: string;
+  size: number;
+  type: string;
+}
 
 export function StudentHomework() {
   const { user } = useAuth();
@@ -59,17 +53,33 @@ export function StudentHomework() {
   
   // Selected homework for detail / submission modal
   const [selectedHw, setSelectedHw] = useState<StudentHomeworkType | null>(null);
-  const [selectedHwDetail, setSelectedHwDetail] = useState<string | null>(null);
-
-  const { data: hwDetail, isLoading: detailLoading } = useStudentHomeworkDetail(selectedHwDetail);
-  const { data: hwSubmission, isLoading: submissionLoading } = useStudentSubmission(selectedHwDetail);
   
   // Submission states
   const [textSubmission, setTextSubmission] = useState("");
   const [attachedFiles, setAttachedFiles] = useState<LocalAttachment[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   
-  const { mutate: submitHomework, isPending: isSubmitting } = useSubmitHomework();
+  // Local submission states (mapping homeworkId -> submission details)
+  const [localSubmissions, setLocalSubmissions] = useState<Record<string, any>>({});
+
+  // Load all local submissions from localStorage on mount
+  useEffect(() => {
+    if (!user?.id) return;
+    const prefix = `student_submission_`;
+    const keys = Object.keys(localStorage);
+    const submissions: Record<string, any> = {};
+    keys.forEach(key => {
+      if (key.startsWith(prefix) && key.endsWith(`_${user.id}`)) {
+        const hwId = key.replace(prefix, "").replace(`_${user.id}`, "");
+        try {
+          submissions[hwId] = JSON.parse(localStorage.getItem(key) || "{}");
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    });
+    setLocalSubmissions(submissions);
+  }, [user?.id]);
 
   // Handle local file attachment
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -79,17 +89,11 @@ export function StudentHomework() {
     const newFiles = [...attachedFiles];
 
     for (const file of files) {
-      try {
-        const base64 = await fileToBase64(file);
-        newFiles.push({
-          fileName: file.name,
-          size: file.size,
-          mimeType: file.type || "application/octet-stream",
-          base64
-        });
-      } catch (err) {
-        toast.error(`Failed to read file: ${file.name}`);
-      }
+      newFiles.push({
+        name: file.name,
+        size: file.size,
+        type: file.type,
+      });
     }
     setAttachedFiles(newFiles);
     setIsUploading(false);
@@ -103,42 +107,115 @@ export function StudentHomework() {
   const handleSubmitHomework = () => {
     if (!selectedHw) return;
     
-    submitHomework(
-      {
-        homeworkId: selectedHw.id,
-        payload: {
-          textSubmission: textSubmission || undefined,
-          attachments: attachedFiles.length > 0 ? attachedFiles : undefined
-        }
-      },
-      {
-        onSuccess: () => {
-          toast.success("Assignment submitted successfully!", {
-            description: "Your teacher will review your submission shortly."
-          });
-          setTextSubmission("");
-          setAttachedFiles([]);
-          setSelectedHw(null);
-        },
-        onError: (err: any) => {
-          toast.error("Failed to submit homework", { description: err.message });
-        }
-      }
+    const submissionData = {
+      studentId: user?.id,
+      name: user?.name,
+      rollNumber: user?.rollNumber,
+      submittedAt: new Date().toISOString(),
+      textSubmission,
+      attachments: attachedFiles,
+      status: new Date() > new Date(selectedHw.dueAt || "") ? "LATE" : "SUBMITTED"
+    };
+
+    // Save to localStorage
+    localStorage.setItem(`student_submission_${selectedHw.id}_${user?.id}`, JSON.stringify(submissionData));
+    
+    // Update local state
+    setLocalSubmissions(prev => ({
+      ...prev,
+      [selectedHw.id]: submissionData
+    }));
+
+    // Trigger update in mock submissions (for teacher portal synchronization)
+    const mockSubmissionsKey = `mock_submissions_${selectedHw.id}`;
+    const savedMocks = localStorage.getItem(mockSubmissionsKey);
+    let mocks: any[] = [];
+    if (savedMocks) {
+      mocks = JSON.parse(savedMocks);
+    }
+    const studentIdx = mocks.findIndex((m: any) => 
+      (user?.id && m.studentId === user.id) || 
+      (user?.rollNumber && m.rollNumber === user.rollNumber)
     );
+    if (studentIdx > -1) {
+      mocks[studentIdx] = {
+        ...mocks[studentIdx],
+        name: user?.name || mocks[studentIdx].name,
+        rollNumber: user?.rollNumber || mocks[studentIdx].rollNumber,
+        status: submissionData.status,
+        submittedAt: submissionData.submittedAt,
+        textSubmission: submissionData.textSubmission,
+        attachments: submissionData.attachments
+      };
+    } else {
+      mocks.unshift({
+        studentId: user?.id || "unknown",
+        name: user?.name || "Student",
+        rollNumber: user?.rollNumber || "000",
+        status: submissionData.status,
+        submittedAt: submissionData.submittedAt,
+        textSubmission: submissionData.textSubmission,
+        marks: null,
+        feedback: "",
+        attachments: submissionData.attachments || []
+      });
+    }
+    localStorage.setItem(mockSubmissionsKey, JSON.stringify(mocks));
+
+    toast.success("Assignment submitted successfully!", {
+      description: "Your teacher will review your submission shortly."
+    });
+    
+    // Reset form & close modal
+    setTextSubmission("");
+    setAttachedFiles([]);
+    setSelectedHw(null);
   };
 
-  // Helper to get status of the submission
+  // Helper to get status of the submission (checks backend first, then falls back to localStorage)
   const getSubmissionStatus = (hw: StudentHomeworkType) => {
-    const backendSub = hw.mySubmission;
+    // 1. Check if graded/submitted in the backend response
+    const backendSub = hw.submissions && hw.submissions[0];
     if (backendSub) {
       switch (backendSub.status) {
         case "GRADED":
-          return { text: `Graded: ${backendSub.marks}/${hw.totalMarks}`, color: "bg-emerald-100 text-emerald-700 border-emerald-200", isGraded: true, marks: backendSub.marks, feedback: backendSub.feedback };
+          return { text: `Graded: ${backendSub.marks}/${hw.totalMarks}`, color: "bg-emerald-100 text-emerald-700 border-emerald-200", isGraded: true, marks: backendSub.marks, feedback: backendSub.gradedAt };
         case "SUBMITTED":
           return { text: "Submitted", color: "bg-blue-100 text-blue-700 border-blue-200", isSubmitted: true };
         case "LATE":
           return { text: "Submitted Late", color: "bg-orange-100 text-orange-700 border-orange-200", isSubmitted: true };
       }
+    }
+
+    // 2. Fallback to localStorage submission
+    const localSub = localSubmissions[hw.id];
+    if (localSub) {
+      // Check if teacher has graded it in mock submissions
+      const mockSubmissionsKey = `mock_submissions_${hw.id}`;
+      const savedMocks = localStorage.getItem(mockSubmissionsKey);
+      if (savedMocks) {
+        const mocks = JSON.parse(savedMocks);
+        const myMock = mocks.find((m: any) => 
+          (user?.id && m.studentId === user.id) || 
+          (user?.rollNumber && m.rollNumber === user.rollNumber)
+        );
+        if (myMock && myMock.status === "GRADED") {
+          return {
+            text: `Graded: ${myMock.marks}/${hw.totalMarks}`,
+            color: "bg-emerald-100 text-emerald-700 border-emerald-200",
+            isGraded: true,
+            marks: myMock.marks,
+            feedback: myMock.feedback
+          };
+        }
+      }
+
+      const isLate = localSub.status === "LATE";
+      return { 
+        text: isLate ? "Submitted Late" : "Submitted", 
+        color: isLate ? "bg-orange-100 text-orange-700 border-orange-200" : "bg-blue-100 text-blue-700 border-blue-200", 
+        isSubmitted: true 
+      };
     }
     
     return { text: "Pending", color: "bg-amber-100 text-amber-700 border-amber-200", isPending: true };
@@ -259,14 +336,11 @@ export function StudentHomework() {
                               <FileText className="h-4 w-4 text-indigo-500 shrink-0" />
                               <span className="font-semibold text-slate-700 truncate">{att.fileName}</span>
                             </div>
-                            <Button 
-                              size="icon" 
-                              variant="ghost" 
-                              className="h-7 w-7 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
-                              onClick={() => downloadFileWithAuth(`/homework/student/${hw.id}/attachments/${att.id}`, att.fileName)}
-                            >
-                              <Download className="h-3.5 w-3.5" />
-                            </Button>
+                            <a href={`/api/proxy/homework/student/${hw.id}/attachments/${att.id}`} download={att.fileName} target="_blank" rel="noopener noreferrer">
+                              <Button size="icon" variant="ghost" className="h-7 w-7 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50">
+                                <Download className="h-3.5 w-3.5" />
+                              </Button>
+                            </a>
                           </div>
                         ))}
                       </div>
@@ -278,12 +352,12 @@ export function StudentHomework() {
                   {/* Submission Status or Action Button */}
                   <div className="pt-2 border-t border-slate-100">
                     {status.isGraded ? (
-                      <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3 text-xs mb-2">
+                      <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3 text-xs">
                         <p className="font-bold text-emerald-900 mb-0.5">Feedback from Teacher:</p>
                         <p className="text-emerald-800 font-medium">{status.feedback || "Great job!"}</p>
                       </div>
                     ) : status.isSubmitted ? (
-                      <div className="flex items-center gap-1.5 text-xs text-slate-600 font-medium mb-2">
+                      <div className="flex items-center gap-1.5 text-xs text-slate-600 font-medium">
                         <CheckCircle2 className="h-4 w-4 text-emerald-500" />
                         Submitted. Waiting for grading.
                       </div>
@@ -294,18 +368,11 @@ export function StudentHomework() {
                           setTextSubmission("");
                           setAttachedFiles([]);
                         }}
-                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs mb-2"
+                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs"
                       >
                         Submit Assignment
                       </Button>
                     )}
-                    <Button 
-                      variant="outline"
-                      onClick={() => setSelectedHwDetail(hw.id)}
-                      className="w-full font-semibold text-xs"
-                    >
-                      View Full Details
-                    </Button>
                   </div>
                 </div>
               </Card>
@@ -373,7 +440,7 @@ export function StudentHomework() {
                       <div key={idx} className="flex items-center justify-between p-2 bg-white border border-slate-200 rounded-lg text-xs shadow-sm">
                         <div className="flex items-center gap-2 truncate">
                           <FileText className="h-4 w-4 text-indigo-500 shrink-0" />
-                          <span className="font-semibold text-slate-700 truncate">{file.fileName}</span>
+                          <span className="font-semibold text-slate-700 truncate">{file.name}</span>
                           <span className="text-slate-400 text-[9px]">({(file.size / 1024).toFixed(1)} KB)</span>
                         </div>
                         <Button size="icon" variant="ghost" onClick={() => removeAttachedFile(idx)} className="h-6 w-6 text-slate-400 hover:text-red-500 shrink-0">
@@ -389,86 +456,10 @@ export function StudentHomework() {
 
           <DialogFooter className="bg-slate-50/50 border-t border-slate-100 px-6 py-4 flex gap-2 justify-end shrink-0">
             <Button variant="outline" onClick={() => setSelectedHw(null)} className="border-slate-200 hover:bg-slate-100 text-slate-700">Cancel</Button>
-            <Button onClick={handleSubmitHomework} disabled={isSubmitting || (!textSubmission && attachedFiles.length === 0)} className="bg-indigo-600 hover:bg-indigo-700 text-white">
-              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CloudUpload className="w-4 h-4 mr-2" />}
+            <Button onClick={handleSubmitHomework} disabled={!textSubmission && attachedFiles.length === 0} className="bg-indigo-600 hover:bg-indigo-700 text-white">
               Submit
             </Button>
           </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ── Detail Modal ── */}
-      <Dialog open={!!selectedHwDetail} onOpenChange={(open) => !open && setSelectedHwDetail(null)}>
-        <DialogContent className="max-w-2xl bg-white border-slate-100 p-0 overflow-hidden flex flex-col">
-          <DialogHeader className="p-6 border-b border-slate-100 shrink-0">
-            <DialogTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
-              <BookOpen className="h-5 w-5 text-indigo-600" />
-              Assignment Details
-            </DialogTitle>
-          </DialogHeader>
-          <div className="p-6 space-y-6 flex-1 overflow-y-auto">
-            {detailLoading ? (
-              <div className="py-10 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-indigo-600" /></div>
-            ) : hwDetail ? (
-              <>
-                <div>
-                  <h2 className="text-xl font-bold text-slate-900">{hwDetail.title}</h2>
-                  <div className="flex items-center gap-4 mt-2 text-sm text-slate-500">
-                    <span className="flex items-center gap-1.5"><Calendar className="w-4 h-4" /> Due: {hwDetail.dueAt ? new Date(hwDetail.dueAt).toLocaleDateString() : 'No date'}</span>
-                    <span className="flex items-center gap-1.5"><Award className="w-4 h-4" /> Max Marks: {hwDetail.totalMarks || 100}</span>
-                  </div>
-                </div>
-                
-                {hwDetail.description && (
-                  <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 text-slate-700 text-sm whitespace-pre-wrap">
-                    {hwDetail.description}
-                  </div>
-                )}
-                
-                {hwDetail.instructions && (
-                  <div className="space-y-2">
-                    <h4 className="font-semibold text-slate-900 text-sm">Instructions</h4>
-                    <div className="text-sm text-slate-600 whitespace-pre-wrap leading-relaxed">
-                      {hwDetail.instructions}
-                    </div>
-                  </div>
-                )}
-
-                {/* Live Submission Status block */}
-                <div className="border-t border-slate-100 pt-6">
-                  <h4 className="font-semibold text-slate-900 text-sm mb-3">My Submission Status</h4>
-                  {submissionLoading ? (
-                    <Skeleton className="h-20 w-full" />
-                  ) : hwSubmission ? (
-                    <div className={`p-4 rounded-lg border ${
-                      hwSubmission.status === 'GRADED' ? 'bg-emerald-50 border-emerald-100' :
-                      hwSubmission.status === 'SUBMITTED' ? 'bg-blue-50 border-blue-100' :
-                      'bg-orange-50 border-orange-100'
-                    }`}>
-                      <div className="flex justify-between items-start mb-2">
-                        <Badge className={
-                          hwSubmission.status === 'GRADED' ? 'bg-emerald-100 text-emerald-800' :
-                          hwSubmission.status === 'SUBMITTED' ? 'bg-blue-100 text-blue-800' :
-                          'bg-orange-100 text-orange-800'
-                        }>{hwSubmission.status}</Badge>
-                        {hwSubmission.marks !== null && (
-                          <span className="font-bold text-emerald-700">{hwSubmission.marks} / {hwDetail.totalMarks} Marks</span>
-                        )}
-                      </div>
-                      {hwSubmission.feedback && (
-                        <p className="text-sm text-slate-700 mt-2"><span className="font-semibold text-slate-900">Feedback:</span> {hwSubmission.feedback}</p>
-                      )}
-                      <p className="text-xs text-slate-500 mt-2">Submitted on: {hwSubmission.submittedAt ? new Date(hwSubmission.submittedAt).toLocaleString() : 'N/A'}</p>
-                    </div>
-                  ) : (
-                    <p className="text-sm text-slate-500">Not submitted yet.</p>
-                  )}
-                </div>
-              </>
-            ) : (
-              <div className="py-10 text-center text-slate-500">Assignment not found</div>
-            )}
-          </div>
         </DialogContent>
       </Dialog>
     </div>

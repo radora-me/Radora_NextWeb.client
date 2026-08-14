@@ -1,6 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { fetchJsonWithAuth } from "@/lib/api-client";
-import { SearchedStudent } from "@/types/api.types";
+
+export interface SearchedStudent {
+  id: string;
+  name: string;
+  rollNumber: string;
+  className: string;
+  profilePhotoUrl: string | null;
+  role: string;
+}
 
 export function useSearchStudent(rollNumber: string, enabled: boolean = true) {
   return useQuery<SearchedStudent>({

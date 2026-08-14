@@ -37,7 +37,7 @@ import {
   attendanceSummaries,
   weeklyTrend,
 } from "@/features/attendance/data/mock-attendance";
-import type { AttendanceRecord } from "@/types/api.types";
+import type { AttendanceRecord } from "@/features/attendance/data/mock-attendance";
 
 // ---------------------------------------------------------------------------
 // Helpers

@@ -1,15 +1,37 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchJsonWithAuth, fetchWithAuth } from "@/lib/api-client";
-import { TeacherCourse } from "@/types/api.types";
-import { TeacherStudent } from "@/types/api.types";
-import { TeacherFoundStudent } from "@/types/api.types";
-import { StudentProfileData } from "@/types/api.types";
+
+export interface TeacherCourse {
+  id: string;
+  title: string;
+  description: string; // section (e.g. "A")
+}
+
+export interface TeacherStudent {
+  id: string;
+  name: string;
+  rollNumber: string;
+  className: string;
+  profilePhotoUrl: string | null;
+  courses: TeacherCourse[];
+  addedAt: string;
+}
 
 export function useTeacherStudents() {
   return useQuery<TeacherStudent[]>({
     queryKey: ["teacher-students"],
     queryFn: () => fetchJsonWithAuth<TeacherStudent[]>("/teacher/students"),
   });
+}
+
+export interface TeacherFoundStudent {
+  id: string;
+  name: string;
+  rollNumber: string;
+  className: string;
+  profilePhotoUrl: string | null;
+  courses: TeacherCourse[];
+  existingTeacherIds: string[];
 }
 
 export function useTeacherSearchStudent(rollNumber: string, enabled: boolean = true) {
@@ -50,66 +72,3 @@ export function useTeacherAddStudent() {
     },
   });
 }
-
-export function useTeacherDeepStudentProfile(rollNumber: string | null) {
-  return useQuery<StudentProfileData>({
-    queryKey: ["teacher-deep-student-profile", rollNumber],
-    queryFn: async () => {
-      // getFullProfile returns _toStudentPayload which nests profile under studentProfile
-      const raw = await fetchJsonWithAuth<any>(
-        `/teacher/students/by-roll/${encodeURIComponent(rollNumber!.trim())}/profile`
-      );
-      // Flatten the nested studentProfile sub-document into a flat object
-      const sp = raw.studentProfile || {};
-      return {
-        id: raw.id,
-        name: raw.name,
-        rollNumber: raw.rollNumber,
-        className: raw.className,
-        profilePhotoUrl: raw.profilePhotoUrl,
-        address: sp.address ?? null,
-        city: sp.city ?? null,
-        state: sp.state ?? null,
-        pincode: sp.pincode ?? null,
-        parentName: sp.parentName ?? null,
-        parentEmail: sp.parentEmail ?? null,
-        parentPhone: sp.parentPhone ?? null,
-        parentRelation: sp.parentRelation ?? null,
-        dateOfBirth: sp.dateOfBirth ?? null,
-        bloodGroup: sp.bloodGroup ?? null,
-        emergencyPhone: sp.emergencyPhone ?? null,
-      } as StudentProfileData;
-    },
-    enabled: !!rollNumber?.trim(),
-  });
-}
-
-export function useUpdateStudentProfile() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async ({
-      rollNumber,
-      data,
-    }: {
-      rollNumber: string;
-      data: Partial<StudentProfileData>;
-    }) => {
-      const res = await fetchWithAuth(
-        `/teacher/students/by-roll/${encodeURIComponent(rollNumber.trim())}/profile`,
-        {
-          method: "PATCH",
-          body: JSON.stringify(data),
-        }
-      );
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || json.message || "Failed to update profile");
-      return json;
-    },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: ["teacher-deep-student-profile", variables.rollNumber],
-      });
-    },
-  });
-}
-

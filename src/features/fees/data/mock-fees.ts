@@ -1,5 +1,27 @@
-import { FeeStructure } from "@/types/api.types";
-import { FeePayment } from "@/types/api.types";
+export interface FeeStructure {
+  id: string;
+  name: string;
+  amount: number;
+  frequency: "monthly" | "quarterly" | "annually" | "one-time";
+  applicableTo: string;
+  description?: string;
+}
+
+export interface FeePayment {
+  id: string;
+  studentId: string;
+  studentName: string;
+  class: string;
+  section: string;
+  feeType: string;
+  amount: number;
+  paidAmount: number;
+  dueDate: string;
+  paidDate?: string;
+  status: "paid" | "partial" | "pending" | "overdue";
+  receiptNo?: string;
+}
+
 export const feeStructures: FeeStructure[] = [
   { id: "FS01", name: "Tuition Fee", amount: 5000, frequency: "monthly", applicableTo: "All Classes", description: "Monthly tuition charges" },
   { id: "FS02", name: "Transport Fee", amount: 2000, frequency: "monthly", applicableTo: "Bus Students", description: "School bus transportation" },

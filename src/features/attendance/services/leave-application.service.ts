@@ -1,6 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { fetchJsonWithAuth, fetchWithAuth } from "@/lib/api-client";
-import { LeaveRecord } from "@/types/api.types";
 
 export function useApplyLeave() {
   return useMutation({
@@ -17,6 +16,17 @@ export function useApplyLeave() {
       return result;
     },
   });
+}
+
+export interface LeaveRecord {
+  id: string;
+  studentId: string;
+  fromDate: string;
+  toDate: string;
+  reason: string;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  createdAt: string;
+  updatedAt: string;
 }
 
 export function useLeaveHistory() {

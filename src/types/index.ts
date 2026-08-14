@@ -83,5 +83,3 @@ export interface Activity {
   timestamp: string;
   avatar?: string;
 }
-
-export * from "./api.types";

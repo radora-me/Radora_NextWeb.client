@@ -29,8 +29,7 @@ import {
   upcomingEvents,
   recentActivities,
 } from "@/features/dashboard/data/mock-dashboard";
-import { useHolidays } from "@/features/dashboard/services";
-import { useAuth } from "@/features/auth/context/auth-context";
+import { useAdminHolidays } from "@/features/dashboard/services";
 
 const fadeIn = {
   initial: { opacity: 0, y: 16 },
@@ -63,8 +62,7 @@ export function DashboardPage() {
   const [studentCount, setStudentCount] = useState(1247);
   const [teacherCount, setTeacherCount] = useState(86);
 
-  const { user } = useAuth();
-  const { data: dbHolidays } = useHolidays(user?.role as any);
+  const { data: dbHolidays } = useAdminHolidays();
 
   useEffect(() => {
     // Load student counts

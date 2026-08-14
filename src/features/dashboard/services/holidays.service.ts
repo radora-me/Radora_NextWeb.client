@@ -1,37 +1,35 @@
-import { useQuery } from "@tanstack/react-query";
-import { fetchJsonWithAuth } from "@/lib/api-client";
-import { DashboardHoliday } from "@/types/api.types";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { fetchJsonWithAuth, fetchWithAuth } from "@/lib/api-client";
 
-/**
- * Fetch holidays using the appropriate endpoint for the caller's role.
- *
- * - admin  → GET /auth/admin/holidays
- * - teacher → GET /teacher/attendance/holidays
- * - student / unauthenticated → disabled (returns empty array)
- *
- * Pass `role` from `useAuth()` so the hook never calls an
- * endpoint the current user is not authorised to use.
- */
-export function useHolidays(role: "admin" | "teacher" | "student" | undefined) {
-  const endpoint =
-    role === "admin"
-      ? "/auth/admin/holidays"
-      : role === "teacher"
-      ? "/teacher/attendance/holidays"
-      : null;
+export interface Holiday {
+  id: string;
+  title: string;
+  date: string;
+  createdBy: string;
+  createdAt: string;
+}
 
-  return useQuery<DashboardHoliday[]>({
-    queryKey: ["holidays", role],
-    queryFn: () => fetchJsonWithAuth<DashboardHoliday[]>(endpoint!),
-    enabled: !!endpoint,
-    staleTime: 5 * 60 * 1000, // holidays rarely change
+export function useAdminHolidays() {
+  return useQuery<Holiday[]>({
+    queryKey: ["admin-holidays"],
+    queryFn: () => fetchJsonWithAuth<Holiday[]>("/auth/admin/holidays"),
   });
 }
 
-/**
- * @deprecated Use `useHolidays(role)` instead.
- * This alias is kept to avoid breaking any existing imports.
- */
-export function useAdminHolidays() {
-  return useHolidays("admin");
+export function useCreateHoliday() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { title: string; date: string }) => {
+      const res = await fetchWithAuth("/auth/admin/create-holiday", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || json.message || "Failed to create holiday");
+      return json;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-holidays"] });
+    },
+  });
 }

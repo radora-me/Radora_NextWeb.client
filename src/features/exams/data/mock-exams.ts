@@ -1,5 +1,26 @@
-import { Exam } from "@/types/api.types";
-import { GradeEntry } from "@/types/api.types";
+export interface Exam {
+  id: string;
+  name: string;
+  subject: string;
+  class: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  room: string;
+  totalMarks: number;
+  status: "upcoming" | "ongoing" | "completed";
+}
+
+export interface GradeEntry {
+  studentId: string;
+  studentName: string;
+  rollNumber: string;
+  marks: number;
+  totalMarks: number;
+  grade: string;
+  percentage: number;
+}
+
 export const mockExams: Exam[] = [
   { id: "EX001", name: "Mid-Term Examination", subject: "Mathematics", class: "10-A", date: "2026-06-20", startTime: "09:00", endTime: "12:00", room: "Hall A", totalMarks: 100, status: "upcoming" },
   { id: "EX002", name: "Mid-Term Examination", subject: "Physics", class: "10-A", date: "2026-06-22", startTime: "09:00", endTime: "12:00", room: "Hall A", totalMarks: 100, status: "upcoming" },
