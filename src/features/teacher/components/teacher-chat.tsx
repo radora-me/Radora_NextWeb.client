@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { PageHeader } from "@/components/shared/page-header";
 import { Input } from "@/components/ui/input";
@@ -13,38 +12,22 @@ import { useChatRooms, useChatMessages, useSendMessage } from "@/features/chat/s
 import { useAuth } from "@/features/auth/context/auth-context";
 
 export function TeacherChat() {
-  const searchParams = useSearchParams();
-  const roomIdFromUrl = searchParams.get("roomId");
-
-  const [activeRoomId, setActiveRoomId] = useState<string | null>(roomIdFromUrl);
+  const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   // Mobile: show sidebar (true) or chat area (false)
-  const [showSidebar, setShowSidebar] = useState(!roomIdFromUrl); // hide sidebar if a room was pre-selected
+  const [showSidebar, setShowSidebar] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
 
   const { data: rooms, isLoading: roomsLoading } = useChatRooms();
 
-  // Set default active room: prefer roomId from URL, else first room
+  // Set default active room
   useEffect(() => {
-    if (!rooms || rooms.length === 0) return;
-    if (roomIdFromUrl) {
-      // Confirm the room actually exists in the list
-      const exists = rooms.some((r) => r.id === roomIdFromUrl);
-      if (exists) {
-        setActiveRoomId(roomIdFromUrl);
-        setShowSidebar(false);
-      } else {
-        // Fallback to first room if the URL roomId doesn't exist
-        setActiveRoomId(rooms[0].id);
-        setShowSidebar(false);
-      }
-    } else if (!activeRoomId) {
+    if (rooms && rooms.length > 0 && !activeRoomId) {
       setActiveRoomId(rooms[0].id);
       setShowSidebar(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rooms]);
+  }, [rooms, activeRoomId]);
 
   const { data: activeChatData, isLoading: messagesLoading } = useChatMessages(activeRoomId);
   const { mutate: sendMessage, isPending: isSending } = useSendMessage();

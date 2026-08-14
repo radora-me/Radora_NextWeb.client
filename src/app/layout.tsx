@@ -34,11 +34,11 @@ export default function RootLayout({
       className={`${inter.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full">
-        <QueryProvider>
-          <AuthProvider>
+        <AuthProvider>
+          <QueryProvider>
             <TooltipProvider>{children}</TooltipProvider>
-          </AuthProvider>
-        </QueryProvider>
+          </QueryProvider>
+        </AuthProvider>
         <Toaster position="top-right" richColors closeButton />
       </body>
     </html>

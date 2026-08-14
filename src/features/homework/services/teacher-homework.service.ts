@@ -1,7 +1,21 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { fetchJsonWithAuth, fetchWithAuth } from "@/lib/api-client";
-import { HomeworkAssignment } from "@/types/api.types";
-import { TeacherSubmissionData } from "@/types/api.types";
+
+export interface HomeworkAssignment {
+  id: string;
+  title: string;
+  description: string;
+  instructions: string;
+  dueAt: string;
+  allowLateSubmission: boolean;
+  totalMarks: number;
+  status: "PUBLISHED" | "DRAFT";
+  createdAt: string;
+  updatedAt: string;
+  course: { id: string; title: string };
+  submissionsCount: number;
+  gradedCount: number;
+}
 
 export function useTeacherHomework() {
   return useQuery<HomeworkAssignment[]>({
@@ -80,45 +94,3 @@ export function useDeleteHomework() {
   });
 }
 
-export function useTeacherHomeworkDetail(homeworkId: string | null) {
-  return useQuery<HomeworkAssignment>({
-    queryKey: ["teacher-homework-detail", homeworkId],
-    queryFn: () => fetchJsonWithAuth<HomeworkAssignment>(`/homework/teacher/${homeworkId}`),
-    enabled: !!homeworkId,
-  });
-}
-
-export function useReopenResubmission() {
-  return useMutation({
-    mutationFn: async (homeworkId: string) => {
-      const res = await fetchWithAuth(`/homework/teacher/${homeworkId}/resubmissions/reopen`, {
-        method: "POST",
-      });
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.error || result.message || "Failed to reopen");
-      return result;
-    },
-  });
-}
-
-export function useTeacherSubmissions(homeworkId: string | null) {
-  return useQuery<TeacherSubmissionData>({
-    queryKey: ["teacher-submissions", homeworkId],
-    queryFn: () => fetchJsonWithAuth<TeacherSubmissionData>(`/homework/teacher/${homeworkId}/submissions`),
-    enabled: !!homeworkId,
-  });
-}
-
-export function useGradeSubmission() {
-  return useMutation({
-    mutationFn: async ({ homeworkId, studentId, marks, feedback }: { homeworkId: string, studentId: string, marks: number, feedback: string }) => {
-      const res = await fetchWithAuth(`/homework/teacher/${homeworkId}/submissions/${studentId}/grade`, {
-        method: "POST",
-        body: JSON.stringify({ marks, feedback }),
-      });
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.error || result.message || "Failed to grade");
-      return result;
-    },
-  });
-}

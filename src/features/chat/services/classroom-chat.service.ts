@@ -1,8 +1,32 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { fetchJsonWithAuth, fetchWithAuth } from "@/lib/api-client";
-import { ChatRoom } from "@/types/api.types";
-import { ChatMessage } from "@/types/api.types";
-import { RoomMessagesResponse } from "@/types/api.types";
+
+export interface ChatRoom {
+  id: string;
+  title: string;
+  description: string;
+  teacherName: string;
+  memberCount: number;
+  messageCount: number;
+  role: "teacher" | "student";
+}
+
+export interface ChatMessage {
+  id: string;
+  content: string;
+  createdAt: string;
+  sender: {
+    id: string;
+    name: string;
+    role: string;
+    profilePhotoUrl: string | null;
+  };
+}
+
+export interface RoomMessagesResponse {
+  room: ChatRoom;
+  messages: ChatMessage[];
+}
 
 export function useChatRooms() {
   return useQuery<ChatRoom[]>({

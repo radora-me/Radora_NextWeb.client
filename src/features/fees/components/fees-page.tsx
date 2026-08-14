@@ -40,7 +40,7 @@ import {
   feePayments,
   collectionSummary,
 } from "@/features/fees/data/mock-fees";
-import type { FeePayment } from "@/types/api.types";
+import type { FeePayment } from "@/features/fees/data/mock-fees";
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                           */
