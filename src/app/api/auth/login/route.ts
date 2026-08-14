@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
 
@@ -19,6 +20,16 @@ function buildCookieString(
 }
 
 export async function POST(req: NextRequest) {
+  const ip = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "127.0.0.1";
+  const rateLimit = checkRateLimit(ip, 10, 15 * 60 * 1000); // 10 attempts per 15 min
+
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: "Too many authentication attempts. Please try again after 15 minutes." },
+      { status: 429 }
+    );
+  }
+
   try {
     const body = await req.json();
     const { identifier, password, roleType } = body as {
