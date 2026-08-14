@@ -86,7 +86,10 @@ const STATUS_CONFIG: {
 ];
 
 export function TeacherAttendance() {
-  const todayStr = new Date().toLocaleDateString("en-CA");
+  const now = new Date();
+  const todayStr = now.toLocaleDateString("en-CA");
+  const twoDaysAgoStr = new Date(now.getTime() - 48 * 60 * 60 * 1000).toLocaleDateString("en-CA");
+
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
   const [dateStr, setDateStr] = useState(todayStr);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
@@ -126,10 +129,23 @@ export function TeacherAttendance() {
     historyStudent?.rollNumber ?? null
   );
 
+  // Check if attendance is already submitted for all students
+  const isAllMarked = localAttendance.length > 0 && localAttendance.every((s) => s.isMarked);
+
+  // Check if any student status was modified compared to fetched data
+  const hasStatusChanges = localAttendance.some((student) => {
+    const original = attendanceData?.find((a) => a.studentId === student.studentId);
+    return !original || original.status !== student.status;
+  });
+
   // ── Handlers ────────────────────────────────────────────────────────────────
 
   const handleSingleSave = async (student: StudentAttendanceRecord) => {
     if (!selectedCourseId) return;
+    if (dateStr < twoDaysAgoStr || dateStr > todayStr) {
+      toast.error("Attendance can only be updated within the 48-hour time bound.");
+      return;
+    }
     setSavingStudentId(student.studentId);
     try {
       await updateStudentAttendance({
@@ -159,6 +175,10 @@ export function TeacherAttendance() {
 
   const handleSubmit = () => {
     if (!selectedCourseId) return;
+    if (dateStr < twoDaysAgoStr || dateStr > todayStr) {
+      toast.error("Attendance can only be marked or updated within the 48-hour time bound.");
+      return;
+    }
     submitAttendance(
       {
         courseId: selectedCourseId,
@@ -294,11 +314,19 @@ export function TeacherAttendance() {
           )}
 
           {/* Table header row */}
-          <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center bg-zinc-50/50 dark:bg-zinc-900/50">
-            <h3 className="font-semibold text-zinc-900 dark:text-white flex items-center gap-2">
-              Student List
-              {attendanceLoading && <Loader2 className="w-4 h-4 animate-spin text-indigo-500" />}
-            </h3>
+          <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center bg-zinc-50/50 dark:bg-zinc-900/50 flex-wrap gap-2">
+            <div className="flex items-center gap-3">
+              <h3 className="font-semibold text-zinc-900 dark:text-white flex items-center gap-2">
+                Student List
+                {attendanceLoading && <Loader2 className="w-4 h-4 animate-spin text-indigo-500" />}
+              </h3>
+              {isAllMarked && !hasStatusChanges && (
+                <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 gap-1 px-2.5 py-0.5 text-xs font-medium">
+                  <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                  Already Submitted
+                </Badge>
+              )}
+            </div>
             <Button
               size="sm"
               variant="outline"
@@ -369,15 +397,16 @@ export function TeacherAttendance() {
                             </Button>
                           ))}
 
-                          {/* Per-student save button (only when already marked) */}
-                          {student.isMarked && student.canEdit && (
+                          {/* Per-student save button (shows for past dates or when marked) */}
+                          {(student.isMarked || dateStr !== todayStr) && (
                             <Button
                               type="button"
                               size="sm"
                               variant="outline"
                               onClick={() => handleSingleSave(student)}
                               disabled={savingStudentId === student.studentId}
-                              className="border-indigo-200 text-indigo-600 hover:bg-indigo-50 ml-1"
+                              className="border-indigo-200 text-indigo-600 hover:bg-indigo-50 ml-1 shrink-0"
+                              title="Save status for this student"
                             >
                               {savingStudentId === student.studentId ? (
                                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -422,16 +451,28 @@ export function TeacherAttendance() {
 
           <Button
             size="lg"
-            className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-200 dark:shadow-none"
+            className={
+              isAllMarked && !hasStatusChanges && dateStr === todayStr
+                ? "w-full sm:w-auto bg-emerald-500 text-white cursor-not-allowed opacity-90"
+                : "w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-200 dark:shadow-none"
+            }
             onClick={handleSubmit}
-            disabled={isSubmitting || localAttendance.length === 0}
+            disabled={isSubmitting || localAttendance.length === 0 || (isAllMarked && !hasStatusChanges && dateStr === todayStr)}
           >
             {isSubmitting ? (
               <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+            ) : isAllMarked && !hasStatusChanges && dateStr === todayStr ? (
+              <CheckCircle className="w-5 h-5 mr-2" />
             ) : (
               <Save className="w-5 h-5 mr-2" />
             )}
-            Submit Attendance
+            {isAllMarked && !hasStatusChanges && dateStr === todayStr
+              ? "Attendance Already Submitted"
+              : dateStr !== todayStr
+              ? "Submit Past Attendance"
+              : isAllMarked && hasStatusChanges
+              ? "Save Updated Attendance"
+              : "Submit Attendance"}
           </Button>
         </motion.div>
       </motion.div>
@@ -502,19 +543,23 @@ export function TeacherAttendance() {
           </DialogHeader>
           <div className="space-y-4 py-3">
             <p className="text-sm text-slate-600 dark:text-slate-400">
-              Select a date to view and update the student attendance records for that day.
+              Select a date to view and update student attendance records. Edits are restricted to the <strong>48-hour window</strong>.
             </p>
             <div className="space-y-2">
               <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                Select Date
+                Select Date (Within 48 Hours)
               </label>
               <Input
                 type="date"
+                min={twoDaysAgoStr}
                 max={todayStr}
                 value={selectedPastDate}
                 onChange={(e) => setSelectedPastDate(e.target.value)}
                 className="w-full"
               />
+              <p className="text-[11px] text-slate-400">
+                Allowed date range: {twoDaysAgoStr} to {todayStr}
+              </p>
             </div>
           </div>
           <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-zinc-800">
@@ -527,6 +572,10 @@ export function TeacherAttendance() {
               onClick={() => {
                 if (!selectedPastDate) {
                   toast.error("Please select a valid date.");
+                  return;
+                }
+                if (selectedPastDate < twoDaysAgoStr || selectedPastDate > todayStr) {
+                  toast.error("Attendance can only be updated within the 48-hour time bound.");
                   return;
                 }
                 setDateStr(selectedPastDate);
