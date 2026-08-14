@@ -5,6 +5,7 @@ import {
   Bot,
   MessageSquare,
   BookOpen,
+  Bell,
 } from "lucide-react";
 
 export const studentNavItems = [
@@ -38,5 +39,10 @@ export const studentNavItems = [
     title: "Classroom Chat",
     href: "/student-classroom-chat",
     icon: MessageSquare,
+  },
+  {
+    title: "Notice Board",
+    href: "/student-notifications",
+    icon: Bell,
   },
 ];

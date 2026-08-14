@@ -9,7 +9,7 @@ export default function TeacherLayout({
 }) {
   return (
     <SidebarProvider>
-      <div className="flex h-screen w-full overflow-hidden bg-slate-50">
+      <div suppressHydrationWarning className="flex h-screen w-full overflow-hidden bg-slate-50">
         <TeacherSidebar />
         <div className="flex flex-1 flex-col overflow-hidden">
           <Topbar />

@@ -24,8 +24,8 @@ import {
   classTimetables,
   periodTimings,
   weekDays,
-  type TimetableSlot,
 } from "@/features/timetable/data/mock-timetable";
+import type { TimetableSlot } from "@/types/api.types";
 
 // ── Slot type styling map ──────────────────────────────────────────────
 const slotStyles: Record<

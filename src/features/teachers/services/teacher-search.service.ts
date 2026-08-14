@@ -1,16 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { fetchJsonWithAuth } from "@/lib/api-client";
-
-export interface SearchedTeacher {
-  id: string;
-  name: string;
-  email: string;
-  courses: {
-    id: string;
-    title: string;
-    description: string;
-  }[];
-}
+import { SearchedTeacher } from "@/types/api.types";
 
 export function useSearchTeacher(email: string, enabled: boolean = true) {
   return useQuery<SearchedTeacher>({

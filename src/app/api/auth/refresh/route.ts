@@ -3,18 +3,6 @@ import { NextRequest, NextResponse } from "next/server";
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
 const TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60;
 
-function buildCookieString(
-  name: string,
-  value: string,
-  maxAge: number,
-  httpOnly: boolean
-): string {
-  let cookie = `${name}=${encodeURIComponent(value)}; Path=/; Max-Age=${maxAge}; SameSite=Lax`;
-  if (httpOnly) cookie += "; HttpOnly";
-  if (process.env.NODE_ENV === "production") cookie += "; Secure";
-  return cookie;
-}
-
 export async function POST(req: NextRequest) {
   // Read the HttpOnly refresh token cookie (not accessible from browser JS)
   const refreshToken = req.cookies.get("radora_refresh_token")?.value;
@@ -40,26 +28,26 @@ export async function POST(req: NextRequest) {
         { error: "Session expired" },
         { status: 401 }
       );
-      response.headers.append("Set-Cookie", "radora_access_token=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax");
-      response.headers.append("Set-Cookie", "radora_refresh_token=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax");
-      response.headers.append("Set-Cookie", "radora_role=; Path=/; Max-Age=0; SameSite=Lax");
+      response.cookies.delete("radora_access_token");
+      response.cookies.delete("radora_refresh_token");
+      response.cookies.delete("radora_role");
       return response;
     }
 
     const response = NextResponse.json({ ok: true }, { status: 200 });
 
-    // Rotate the access token cookie (HttpOnly)
-    response.headers.append(
-      "Set-Cookie",
-      buildCookieString("radora_access_token", data.accessToken, TOKEN_TTL_SECONDS, true)
-    );
+    const cookieOptions = {
+      path: "/",
+      maxAge: TOKEN_TTL_SECONDS,
+      sameSite: "lax" as const,
+      secure: process.env.NODE_ENV === "production",
+      httpOnly: true,
+    };
 
-    // Rotate refresh token if the backend returns a new one
+    response.cookies.set("radora_access_token", data.accessToken, cookieOptions);
+
     if (data.refreshToken) {
-      response.headers.append(
-        "Set-Cookie",
-        buildCookieString("radora_refresh_token", data.refreshToken, TOKEN_TTL_SECONDS, true)
-      );
+      response.cookies.set("radora_refresh_token", data.refreshToken, cookieOptions);
     }
 
     return response;

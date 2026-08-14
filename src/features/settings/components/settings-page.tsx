@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Settings,
@@ -8,10 +8,14 @@ import {
   Calendar,
   Users,
   Shield,
-  Save,
   Upload,
   Plus,
+  User,
+  Loader2,
+  Save,
 } from "lucide-react";
+
+import { useAdminProfile, useUpdateAdminProfile } from "@/features/admin/services/admin-profile.service";
 
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -50,7 +54,32 @@ const itemVariants = {
 };
 
 export function SettingsPage() {
-  const [activeTab, setActiveTab] = useState("general");
+  const [activeTab, setActiveTab] = useState("profile");
+
+  const { data: adminProfile, isLoading: isAdminLoading, refetch: refetchAdmin } = useAdminProfile();
+  const { mutate: updateAdmin, isPending: isUpdatingAdmin } = useUpdateAdminProfile();
+
+  const [adminName, setAdminName] = useState("");
+  const [adminEmail, setAdminEmail] = useState("");
+
+  // Update local state when profile loads
+  useEffect(() => {
+    if (adminProfile) {
+      setAdminName(adminProfile.name);
+      setAdminEmail(adminProfile.email);
+    }
+  }, [adminProfile]);
+
+  const handleAdminSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateAdmin({ name: adminName, email: adminEmail }, {
+      onSuccess: () => {
+        alert("Profile updated successfully!");
+        refetchAdmin();
+      },
+      onError: (err: any) => alert(err.message),
+    });
+  };
 
   // General Settings
   const [schoolName, setSchoolName] = useState("Radora International School");
@@ -102,6 +131,10 @@ export function SettingsPage() {
       <motion.div variants={itemVariants}>
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid grid-cols-2 md:grid-cols-4 lg:w-[600px]">
+            <TabsTrigger value="profile" className="gap-2">
+              <User className="h-4 w-4" />
+              <span className="hidden sm:inline">Admin Profile</span>
+            </TabsTrigger>
             <TabsTrigger value="general" className="gap-2">
               <School className="h-4 w-4" />
               <span className="hidden sm:inline">General</span>
@@ -119,6 +152,56 @@ export function SettingsPage() {
               <span className="hidden sm:inline">Security</span>
             </TabsTrigger>
           </TabsList>
+
+          {/* ===== TAB 0: Admin Profile ===== */}
+          <TabsContent value="profile" className="mt-4">
+            <form onSubmit={handleAdminSave}>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Admin Profile</CardTitle>
+                  <CardDescription>
+                    Manage your personal admin account settings.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {isAdminLoading ? (
+                    <div className="flex items-center justify-center p-8">
+                      <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
+                    </div>
+                  ) : (
+                    <div className="grid gap-4 sm:grid-cols-2 max-w-2xl">
+                      <div className="space-y-2">
+                        <Label htmlFor="adminName">Full Name</Label>
+                        <Input
+                          id="adminName"
+                          value={adminName}
+                          onChange={(e) => setAdminName(e.target.value)}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="adminEmail">Email Address</Label>
+                        <Input
+                          id="adminEmail"
+                          type="email"
+                          value={adminEmail}
+                          onChange={(e) => setAdminEmail(e.target.value)}
+                          required
+                        />
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+                <CardFooter className="border-t bg-slate-50/50 px-6 py-4">
+                  <Button type="submit" disabled={isAdminLoading || isUpdatingAdmin}>
+                    {isUpdatingAdmin && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Profile
+                  </Button>
+                </CardFooter>
+              </Card>
+            </form>
+          </TabsContent>
 
           {/* ===== TAB 1: General ===== */}
           <TabsContent value="general" className="mt-4">

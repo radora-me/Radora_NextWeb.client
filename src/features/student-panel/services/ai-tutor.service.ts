@@ -1,34 +1,7 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { fetchJsonWithAuth, fetchWithAuth } from "@/lib/api-client";
-
-export interface AiTutorContextResponse {
-  student: {
-    id: string;
-    name: string;
-    rollNumber: string;
-    className: string;
-    section: string;
-    courses: { id: string; title: string }[];
-  };
-  attendance: {
-    overallAttendance: number;
-    presentClasses: number;
-    absentClasses: number;
-    leaveClasses: number;
-    streak: number;
-    recentRecords: { date: string; status: string; subject: string }[];
-  };
-  suggestedPrompts: string[];
-}
-
-export interface AiTutorChatResponse {
-  reply: string;
-  usedFallback: boolean;
-  fallbackReason?: string;
-  cached: boolean;
-  context: AiTutorContextResponse;
-  suggestedPrompts: string[];
-}
+import { AiTutorContextResponse } from "@/types/api.types";
+import { AiTutorChatResponse } from "@/types/api.types";
 
 export function useAiTutorContext() {
   return useQuery<AiTutorContextResponse>({

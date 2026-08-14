@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowLeft, Mail, Phone, MapPin, Calendar, Loader2, BookOpen, Target, Flame } from "lucide-react";
-import { useStudentProfile } from "@/features/students/services/student-profile.service";
+import { useQuery } from "@tanstack/react-query";
+import { fetchJsonWithAuth } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -24,6 +25,41 @@ function InfoField({ label, value }: { label: string; value?: string }) {
 
 import { Skeleton } from "@/components/ui/skeleton";
 
+interface StudentCourse {
+  id: string;
+  title: string;
+  description: string;
+}
+
+interface StudentProfileData {
+  id: string;
+  name: string;
+  rollNumber: string;
+  className: string;
+  section: string;
+  profilePhotoUrl: string | null;
+  attendancePercentage: number;
+  streak: number;
+  courses: StudentCourse[];
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  pincode: string | null;
+  parentName: string | null;
+  parentEmail: string | null;
+  parentPhone: string | null;
+  parentRelation: string | null;
+  dateOfBirth: string | null;
+  bloodGroup: string | null;
+  emergencyPhone: string | null;
+}
+
+export function useStudentProfile() {
+  return useQuery<StudentProfileData>({
+    queryKey: ["student-profile"],
+    queryFn: () => fetchJsonWithAuth<StudentProfileData>("/student/profile"),
+  });
+}
 export function StudentProfile() {
   const { data: profile, isLoading, isError } = useStudentProfile();
 
@@ -171,10 +207,9 @@ export function StudentProfile() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 <InfoField label="Full Name" value={profile.name} />
                 <InfoField label="Roll Number" value={profile.rollNumber} />
-                <InfoField label="Date of Birth" value="—" />
-                <InfoField label="Gender" value="—" />
-                <InfoField label="Blood Group" value="—" />
-                <InfoField label="Nationality" value="—" />
+                <InfoField label="Date of Birth" value={profile.dateOfBirth ? new Date(profile.dateOfBirth).toLocaleDateString() : "—"} />
+                <InfoField label="Blood Group" value={profile.bloodGroup || "—"} />
+                <InfoField label="Emergency Contact" value={profile.emergencyPhone || "—"} />
               </div>
 
               <Separator className="bg-slate-100" />
@@ -184,7 +219,15 @@ export function StudentProfile() {
                   <MapPin className="h-4 w-4 text-slate-400" />
                   Address
                 </h3>
-                <p className="text-sm text-slate-500">—</p>
+                <p className="text-sm text-slate-500">
+                  {profile.address ? (
+                    <>
+                      {profile.address}
+                      <br />
+                      {profile.city ? `${profile.city}, ` : ""}{profile.state ? `${profile.state} ` : ""}{profile.pincode ? profile.pincode : ""}
+                    </>
+                  ) : "—"}
+                </p>
               </div>
 
               <Separator className="bg-slate-100" />
@@ -192,9 +235,10 @@ export function StudentProfile() {
               <div>
                 <h3 className="text-sm font-semibold mb-4 text-slate-700">Guardian Information</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                  <InfoField label="Guardian Name" value="—" />
-                  <InfoField label="Relation" value="—" />
-                  <InfoField label="Phone" value="—" />
+                  <InfoField label="Guardian Name" value={profile.parentName || "—"} />
+                  <InfoField label="Relation" value={profile.parentRelation || "—"} />
+                  <InfoField label="Phone" value={profile.parentPhone || "—"} />
+                  <InfoField label="Email" value={profile.parentEmail || "—"} />
                 </div>
               </div>
             </CardContent>
@@ -212,7 +256,7 @@ export function StudentProfile() {
             <CardContent className="p-0">
               {profile.courses.length > 0 ? (
                 <div className="divide-y divide-slate-100">
-                  {profile.courses.map((course) => (
+                  {profile.courses.map((course: any) => (
                     <div key={course.id} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
                       <div>
                         <p className="font-medium text-slate-900">{course.title}</p>
