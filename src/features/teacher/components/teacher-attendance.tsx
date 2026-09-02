@@ -223,6 +223,10 @@ export function TeacherAttendance() {
     return section ? `${base} — Section ${section}` : base;
   };
 
+  const selectedCourse = courses?.find(
+    (course) => course.id === selectedCourseId,
+  );
+
   // ── Status badge colour for history records ──────────────────────────────────
 
   const statusBadgeClass = (status: string) => {
@@ -264,7 +268,9 @@ export function TeacherAttendance() {
               disabled={coursesLoading}
             >
               <SelectTrigger className="w-full sm:w-[350px]">
-                <SelectValue placeholder={coursesLoading ? "Loading classes…" : "Select a class"} />
+                <SelectValue placeholder={coursesLoading ? "Loading classes…" : "Select a class"}>
+                  {selectedCourse ? courseLabel(selectedCourse) : null}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {courses?.map((course) => (
