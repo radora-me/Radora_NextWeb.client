@@ -210,10 +210,17 @@ export function TeacherAttendance() {
 
   // ── Course label helper ──────────────────────────────────────────────────────
 
-  const courseLabel = (title: string, description?: string | null) => {
-    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(title?.trim() ?? "");
+  const courseLabel = (course: {
+    title?: string | null;
+    description?: string | null;
+    className?: string | null;
+    section?: string | null;
+  }) => {
+    const title = course.className?.trim() || course.title?.trim() || "Class";
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(title);
     const base = isUUID ? "Class" : title;
-    return description ? `${base} — Section ${description}` : base;
+    const section = course.section?.trim() || course.description?.trim();
+    return section ? `${base} — Section ${section}` : base;
   };
 
   // ── Status badge colour for history records ──────────────────────────────────
@@ -262,8 +269,8 @@ export function TeacherAttendance() {
               <SelectContent>
                 {courses?.map((course) => (
                   <SelectItem key={course.id} value={course.id}>
-                    {courseLabel(course.title, course.description)}
-                    {" "}({course._count.enrollments} student{course._count.enrollments !== 1 ? "s" : ""})
+                    {courseLabel(course)}
+                    {" "}({course.studentCount ?? course._count?.enrollments ?? 0} student{(course.studentCount ?? course._count?.enrollments ?? 0) !== 1 ? "s" : ""})
                   </SelectItem>
                 ))}
               </SelectContent>

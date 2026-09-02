@@ -107,7 +107,11 @@ export interface TeacherAttendanceCourse {
     id: string;
     title: string;
     description: string;
+    courseId?: string;
+    className?: string;
+    section?: string;
     _count: { enrollments: number };
+    studentCount?: number;
 }
 
 export interface StudentAttendanceRecord {
