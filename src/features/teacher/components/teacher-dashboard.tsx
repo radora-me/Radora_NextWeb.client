@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import {
   Users, BookOpen, ClipboardCheck, Percent,
@@ -12,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTeacherStudents } from "@/features/students/services";
+import { useAuth } from "@/features/auth/context/auth-context";
 import {
   useTeacherCourses,
   useTeacherHomeworkList,
@@ -32,6 +34,7 @@ function StatSkeleton() {
 // ── Component ────────────────────────────────────────────────────────────────
 
 export function TeacherDashboard() {
+  const { user } = useAuth();
   // ── Data fetching ──
   const {
     data: students,
@@ -88,6 +91,30 @@ export function TeacherDashboard() {
     if (!courses) return [];
     return [...courses].sort((a, b) => b._count.enrollments - a._count.enrollments);
   }, [courses]);
+
+  if (user?.isSubjectTeacher) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="Subject Teacher Dashboard"
+          description="Select a class to post homework, grade submissions, or enter its classroom chat."
+        />
+        <div className="grid gap-4 md:grid-cols-3">
+          {[
+            { href: "/teacher-homework", title: "Homework & Grades", description: "Choose any class, post assignments, and grade submissions.", icon: BookOpen },
+            { href: "/teacher-chat", title: "Classroom Chat", description: "Choose any available class and join its conversation.", icon: GraduationCap },
+            { href: "/teacher-notifications", title: "Notice Board", description: "View official school announcements.", icon: ClipboardCheck },
+          ].map((item) => (
+            <Link key={item.href} href={item.href} className="rounded-xl border bg-card p-5 transition-colors hover:border-indigo-300 hover:bg-indigo-50/40">
+              <item.icon className="h-6 w-6 text-indigo-500" />
+              <h2 className="mt-4 font-semibold">{item.title}</h2>
+              <p className="mt-2 text-sm text-muted-foreground">{item.description}</p>
+            </Link>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <motion.div

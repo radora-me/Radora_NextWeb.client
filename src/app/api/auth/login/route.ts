@@ -68,6 +68,7 @@ export async function POST(req: NextRequest) {
       rollNumber: data.user.rollNumber ?? null,
       role: data.user.role,
       image: data.user.profilePhotoUrl ?? null,
+      isSubjectTeacher: data.user.isSubjectTeacher ?? false,
     };
 
     const response = NextResponse.json({ user: userProfile }, { status: 200 });

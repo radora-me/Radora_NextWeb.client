@@ -31,6 +31,8 @@ const teacherRoutePrefixes = [
   '/teacher-attendance',
   '/teacher-homework',
   '/teacher-chat',
+  '/teacher-notifications',
+  '/teacher-profile',
 ];
 
 const adminRoutePrefixes = [

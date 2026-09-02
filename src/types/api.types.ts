@@ -161,6 +161,7 @@ export interface User {
     rollNumber?: string | null;
     role: UserRole;
     image?: string | null;
+    isSubjectTeacher?: boolean;
 }
 
 export interface ChatRoom {

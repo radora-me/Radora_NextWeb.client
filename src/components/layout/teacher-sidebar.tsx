@@ -77,7 +77,7 @@ export function TeacherSidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navigation.map((item) => {
+              {navigation.filter((item) => !user?.isSubjectTeacher || ["/teacher-homework", "/teacher-chat", "/teacher-notifications", "/teacher-dashboard"].includes(item.href)).map((item) => {
                 const active = isActive(item.href);
                 return (
                   <SidebarMenuItem key={item.href}>

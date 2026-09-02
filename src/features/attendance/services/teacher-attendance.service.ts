@@ -13,6 +13,13 @@ export function useTeacherCourses() {
   });
 }
 
+export function useTeacherAvailableClasses() {
+  return useQuery<TeacherAttendanceCourse[]>({
+    queryKey: ["teacher-available-classes"],
+    queryFn: () => fetchJsonWithAuth<TeacherAttendanceCourse[]>("/teacher/attendance/available-classes"),
+  });
+}
+
 export function useCourseAttendance(courseId: string | null, date: Date) {
   const formattedDate = date.toISOString().split("T")[0]; // YYYY-MM-DD
   return useQuery<StudentAttendanceRecord[]>({

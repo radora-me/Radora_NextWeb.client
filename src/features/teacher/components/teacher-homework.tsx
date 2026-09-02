@@ -29,7 +29,7 @@ import {
   AlertTriangle,
   ClipboardList
 } from "lucide-react";
-import { useTeacherCourses } from "@/features/attendance/services";
+import { useTeacherAvailableClasses } from "@/features/attendance/services";
 import { 
   useTeacherHomework, 
   useCreateHomework, 
@@ -84,7 +84,7 @@ export function TeacherHomework() {
   const [attachments, setAttachments] = useState<AttachmentFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
 
-  const { data: courses, isLoading: coursesLoading } = useTeacherCourses();
+  const { data: courses, isLoading: coursesLoading } = useTeacherAvailableClasses();
   const { data: homeworks, isLoading: homeworksLoading, refetch } = useTeacherHomework();
   const { data: students } = useTeacherStudents();
   
