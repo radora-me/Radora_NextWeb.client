@@ -7,7 +7,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
-  GraduationCap, 
   Loader2, 
   Eye, 
   EyeOff, 
@@ -31,18 +30,11 @@ import {
   DialogContent,
 } from "@/components/ui/dialog";
 
-const rolePlaceholders: Record<string, string> = {
-  admin: "you@radora.edu",
-  teacher: "teacher@school.edu",
-  student: "e.g. STU001",
-};
-
 export function LoginPage() {
   const router = useRouter();
   const { login } = useAuth();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
-  const [roleType, setRoleType] = useState<"admin" | "teacher" | "student">("admin");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -50,7 +42,7 @@ export function LoginPage() {
   // Forgot Password Wizard State (Steps 1 -> 2 -> 3 -> 4)
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [modalStep, setModalStep] = useState<1 | 2 | 3 | 4>(1);
-  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotIdentifier, setForgotIdentifier] = useState("");
   const [otpCode, setOtpCode] = useState("");
   const [resetToken, setResetToken] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -58,7 +50,6 @@ export function LoginPage() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotError, setForgotError] = useState("");
-  const [forgotSuccess, setForgotSuccess] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,14 +61,14 @@ export function LoginPage() {
     setError("");
 
     try {
-      const result = await login(identifier, password, roleType);
+      const result = await login(identifier, password);
 
       if (result.error) {
         setError(result.error);
       } else {
-        if (roleType === "student") {
+        if (result.user?.role === "student") {
           router.push("/student-dashboard");
-        } else if (roleType === "teacher") {
+        } else if (result.user?.role === "teacher") {
           router.push("/teacher-dashboard");
         } else {
           router.push("/dashboard");
@@ -94,19 +85,18 @@ export function LoginPage() {
   // Step 1: Request Verification Code (OTP)
   const handleRequestOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!forgotEmail) {
-      setForgotError("Please enter your registered email address.");
+    if (!forgotIdentifier) {
+      setForgotError("Please enter your email address or student roll number.");
       return;
     }
     setForgotLoading(true);
     setForgotError("");
-    setForgotSuccess("");
 
     try {
       const res = await fetch("/api/auth/forgot-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: forgotEmail }),
+        body: JSON.stringify({ identifier: forgotIdentifier }),
       });
 
       const data = await res.json();
@@ -114,10 +104,9 @@ export function LoginPage() {
       if (!res.ok) {
         setForgotError(data.error || "Failed to send verification code.");
       } else {
-        setForgotSuccess(data.message || "Verification code sent!");
         setModalStep(2);
       }
-    } catch (err: any) {
+    } catch {
       setForgotError("Network error. Please try again.");
     } finally {
       setForgotLoading(false);
@@ -134,13 +123,12 @@ export function LoginPage() {
 
     setForgotLoading(true);
     setForgotError("");
-    setForgotSuccess("");
 
     try {
       const res = await fetch("/api/auth/verify-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: forgotEmail, otp: otpCode }),
+        body: JSON.stringify({ identifier: forgotIdentifier, otp: otpCode }),
       });
 
       const data = await res.json();
@@ -151,7 +139,7 @@ export function LoginPage() {
         setResetToken(data.resetToken);
         setModalStep(3);
       }
-    } catch (err: any) {
+    } catch {
       setForgotError("Network error. Please try again.");
     } finally {
       setForgotLoading(false);
@@ -176,7 +164,6 @@ export function LoginPage() {
 
     setForgotLoading(true);
     setForgotError("");
-    setForgotSuccess("");
 
     try {
       const res = await fetch("/api/auth/reset-password", {
@@ -195,12 +182,12 @@ export function LoginPage() {
       } else {
         setModalStep(4);
         setPassword(newPassword);
-        if (!identifier) setIdentifier(forgotEmail);
+        if (!identifier) setIdentifier(forgotIdentifier);
         setTimeout(() => {
           setShowForgotModal(false);
         }, 2000);
       }
-    } catch (err: any) {
+    } catch {
       setForgotError("Network error. Please try again.");
     } finally {
       setForgotLoading(false);
@@ -323,60 +310,20 @@ export function LoginPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6" suppressHydrationWarning>
-            {/* Role Toggle Tabs */}
-            <div className="flex rounded-lg bg-slate-100 p-1" suppressHydrationWarning>
-              <button
-                type="button"
-                suppressHydrationWarning
-                onClick={() => setRoleType("admin")}
-                className={`flex-1 rounded-md py-2.5 text-xs sm:text-sm font-medium transition-all ${
-                  roleType === "admin" 
-                    ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-900/5" 
-                    : "text-slate-500 hover:text-slate-900"
-                }`}
-              >
-                Admin
-              </button>
-              <button
-                type="button"
-                suppressHydrationWarning
-                onClick={() => setRoleType("teacher")}
-                className={`flex-1 rounded-md py-2.5 text-xs sm:text-sm font-medium transition-all ${
-                  roleType === "teacher" 
-                    ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-900/5" 
-                    : "text-slate-500 hover:text-slate-900"
-                }`}
-              >
-                Teacher
-              </button>
-              <button
-                type="button"
-                suppressHydrationWarning
-                onClick={() => setRoleType("student")}
-                className={`flex-1 rounded-md py-2.5 text-xs sm:text-sm font-medium transition-all ${
-                  roleType === "student" 
-                    ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-900/5" 
-                    : "text-slate-500 hover:text-slate-900"
-                }`}
-              >
-                Student
-              </button>
-            </div>
-
             {/* Input Fields */}
             <div className="space-y-4" suppressHydrationWarning>
               <div className="space-y-2">
                 <Label htmlFor="identifier" className="text-sm font-medium text-slate-700">
-                  {roleType === "student" ? "Roll Number" : "Email Address"}
+                  Email or roll number
                 </Label>
                 <div className="relative group">
                   <div className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 group-focus-within:text-indigo-600 transition-colors">
-                    {roleType === "student" ? <UserCircle className="h-5 w-5" /> : <Mail className="h-5 w-5" />}
+                    <UserCircle className="h-5 w-5" />
                   </div>
                   <Input
                     id="identifier"
-                    type={roleType === "student" ? "text" : "email"}
-                    placeholder={rolePlaceholders[roleType] ?? "Enter your credentials"}
+                    type="text"
+                    placeholder="Email address or roll number"
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
                     className="pl-10 bg-slate-50/50 border-slate-200 focus-visible:ring-indigo-600 h-12"
@@ -389,24 +336,21 @@ export function LoginPage() {
                   <Label htmlFor="password" className="text-sm font-medium text-slate-700">
                     Password
                   </Label>
-                  {roleType !== "student" && (
-                    <button
+                  <button
                       type="button"
                       onClick={() => {
-                        setForgotEmail(identifier.includes("@") ? identifier : "");
+                        setForgotIdentifier(identifier);
                         setModalStep(1);
                         setOtpCode("");
                         setNewPassword("");
                         setConfirmPassword("");
                         setForgotError("");
-                        setForgotSuccess("");
                         setShowForgotModal(true);
                       }}
                       className="text-xs font-medium text-indigo-600 hover:text-indigo-500 cursor-pointer"
                     >
                       Forgot password?
-                    </button>
-                  )}
+                  </button>
                 </div>
                 <div className="relative group">
                   <div className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 group-focus-within:text-indigo-600 transition-colors">
@@ -529,21 +473,21 @@ export function LoginPage() {
                   className="space-y-5"
                 >
                   <p className="text-xs text-slate-500 leading-relaxed">
-                    Enter your registered email address. We will generate a 6-digit verification code to reset your password safely.
+                    Enter your account email or student roll number. The verification code is sent to the registered recovery address.
                   </p>
 
                   <div className="space-y-1.5">
-                    <Label htmlFor="forgot-email" className="text-xs font-medium text-slate-700">
-                      Email Address
+                    <Label htmlFor="forgot-identifier" className="text-xs font-medium text-slate-700">
+                      Email or roll number
                     </Label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                       <Input
-                        id="forgot-email"
-                        type="email"
-                        placeholder="you@school.edu"
-                        value={forgotEmail}
-                        onChange={(e) => setForgotEmail(e.target.value)}
+                        id="forgot-identifier"
+                        type="text"
+                        placeholder="Email address or roll number"
+                        value={forgotIdentifier}
+                        onChange={(e) => setForgotIdentifier(e.target.value)}
                         className="pl-9 bg-slate-50 border-slate-200 h-10 text-sm focus-visible:ring-indigo-600"
                         autoFocus
                       />
@@ -594,7 +538,7 @@ export function LoginPage() {
                   className="space-y-5"
                 >
                   <div className="p-3 bg-indigo-50/70 border border-indigo-100 rounded-xl text-xs text-indigo-900">
-                    A 6-digit verification code was sent to <strong className="font-semibold">{forgotEmail}</strong>.
+                    A 6-digit verification code was sent to your registered recovery address.
                   </div>
 
                   <div className="space-y-1.5">

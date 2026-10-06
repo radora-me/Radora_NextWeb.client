@@ -2,7 +2,6 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { UserRole } from "@/types";
 import { useQueryClient } from "@tanstack/react-query";
 import { User } from "@/types/api.types";
 
@@ -48,9 +47,8 @@ interface AuthContextType {
   loading: boolean;
   login: (
     identifier: string,
-    password: string,
-    roleType: "admin" | "teacher" | "student"
-  ) => Promise<{ error?: string }>;
+    password: string
+  ) => Promise<{ error?: string; user?: User }>;
   logout: () => Promise<void>;
   refreshSession: () => Promise<boolean>;
 }
@@ -131,15 +129,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    */
   const login = async (
     identifier: string,
-    password: string,
-    roleType: "admin" | "teacher" | "student"
-  ): Promise<{ error?: string }> => {
+    password: string
+  ): Promise<{ error?: string; user?: User }> => {
     try {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
-        body: JSON.stringify({ identifier, password, roleType }),
+        body: JSON.stringify({ identifier, password }),
       });
 
       const data = await res.json();
@@ -149,10 +146,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       setUser(data.user);
-      return {};
-    } catch (err: any) {
+      return { user: data.user };
+    } catch (err: unknown) {
       console.error("Login request failed:", err);
-      return { error: err.message || "Network error. Please try again." };
+      return {
+        error: err instanceof Error ? err.message : "Network error. Please try again.",
+      };
     }
   };
 

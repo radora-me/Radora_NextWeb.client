@@ -1,16 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { email, otp } = body as { email: string; otp: string };
+    const { identifier, otp } = body as { identifier: string; otp: string };
+    const ip = getClientIp(req);
+    const rateLimit = checkRateLimit(`otp:${ip}`, 10, 15 * 60 * 1000);
+
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: "Too many verification attempts. Please try again later." },
+        { status: 429 }
+      );
+    }
 
     const backendRes = await fetch(`${API_BASE}/auth/verify-otp`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, otp }),
+      body: JSON.stringify({ identifier, otp }),
     });
 
     const contentType = backendRes.headers.get("content-type");
@@ -25,7 +35,7 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json(data, { status: 200 });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("[/api/auth/verify-otp] Error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }

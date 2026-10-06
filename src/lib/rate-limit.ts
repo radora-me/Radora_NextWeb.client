@@ -6,6 +6,17 @@ interface RateLimitTracker {
 
 const ipTracker = new Map<string, RateLimitTracker>();
 
+export function getClientIp(request: {
+  headers: { get(name: string): string | null };
+}): string {
+  const forwardedFor = request.headers.get("x-forwarded-for");
+  const firstForwardedIp = forwardedFor?.split(",")[0]?.trim();
+
+  return firstForwardedIp
+    || request.headers.get("x-real-ip")?.trim()
+    || "127.0.0.1";
+}
+
 export function checkRateLimit(
   ip: string,
   limit: number = 15,

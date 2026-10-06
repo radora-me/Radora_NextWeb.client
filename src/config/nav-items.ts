@@ -5,7 +5,7 @@ import {
   ClipboardCheck,
   FileText,
   Calendar,
-  CreditCard,
+  WalletCards,
   Bell,
 } from 'lucide-react';
 
@@ -49,9 +49,9 @@ export const navItems: NavItem[] = [
     roles: ['admin', 'teacher', 'student'],
   },
   {
-    title: 'Fee Management',
-    href: '/fees',
-    icon: CreditCard,
+    title: 'Finance & Accounts',
+    href: '/finance',
+    icon: WalletCards,
     roles: ['admin'],
   },
   {
