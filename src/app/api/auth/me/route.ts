@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const backendRes = await fetch(`${API_BASE}/users/me`, {
+    const backendRes = await fetch(`${API_BASE}/auth/me`, {
       headers: {
         Authorization: `Bearer ${decodeURIComponent(accessToken)}`,
         "Content-Type": "application/json",
