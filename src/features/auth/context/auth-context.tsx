@@ -33,6 +33,7 @@ const adminRoutePrefixes = [
   '/fees',
   '/students',
   '/teachers',
+  '/finance',
   '/notifications',
 ];
 

@@ -67,6 +67,9 @@ export async function POST(req: NextRequest) {
 
     response.cookies.set("radora_access_token", data.accessToken, { ...cookieOptions, httpOnly: true });
     response.cookies.set("radora_refresh_token", data.refreshToken, { ...cookieOptions, httpOnly: true });
+    // Non-sensitive routing hint for Edge middleware. Authorization still
+    // comes from the HttpOnly access token and backend role checks.
+    response.cookies.set("radora_role", data.user.role, { ...cookieOptions, httpOnly: false });
     return response;
   } catch (err: unknown) {
     console.error("[/api/auth/login] Error:", err);

@@ -45,6 +45,7 @@ const adminRoutePrefixes = [
   '/settings',
   '/students',
   '/teachers',
+  '/finance',
 ];
 
 const authRoutePrefixes = ['/login', '/register'];
@@ -59,7 +60,10 @@ export function middleware(req: NextRequest) {
   // Read the plain role cookie (non-sensitive, contains only role string)
   const role = req.cookies.get('radora_role')?.value;
 
-  const isLoggedIn = hasToken && !!role;
+  // The role cookie is only a routing hint. It may be absent after an older
+  // deployment or cookie migration; the HttpOnly access token is the session
+  // boundary. Backend APIs remain responsible for authorization.
+  const isLoggedIn = hasToken;
 
   const isAuthRoute    = authRoutePrefixes.some(p => nextUrl.pathname.startsWith(p));
   const isStudentRoute = studentRoutePrefixes.some(p => nextUrl.pathname.startsWith(p));
