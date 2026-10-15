@@ -471,8 +471,11 @@ export interface CreateStudentResponse {
 export interface SearchedStudent {
     id: string;
     name: string;
+      email?: string | null;
     rollNumber: string;
     className: string;
+      parentName?: string | null;
+      parentPhone?: string | null;
     profilePhotoUrl: string | null;
     role: string;
 }

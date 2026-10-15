@@ -7,6 +7,7 @@ import {
   Calendar,
   WalletCards,
   Bell,
+  CreditCard,
 } from 'lucide-react';
 
 import type { NavItem } from '@/types';
@@ -52,6 +53,12 @@ export const navItems: NavItem[] = [
     title: 'Finance & Accounts',
     href: '/finance',
     icon: WalletCards,
+    roles: ['admin'],
+  },
+  {
+    title: 'Fees & Payments',
+    href: '/fees',
+    icon: CreditCard,
     roles: ['admin'],
   },
   {

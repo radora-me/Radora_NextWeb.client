@@ -1,5 +1,5 @@
-import { FeesPage } from "@/features/fees/components/fees-page";
+import { AdminFeesPage } from "@/features/fees/components/admin-fees-page-v2";
 
 export default function Page(props: any) {
-  return <FeesPage {...props} />;
+  return <AdminFeesPage />;
 }

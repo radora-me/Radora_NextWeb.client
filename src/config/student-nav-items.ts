@@ -6,6 +6,7 @@ import {
   MessageSquare,
   BookOpen,
   Bell,
+  CreditCard,
 } from "lucide-react";
 
 export const studentNavItems = [
@@ -44,5 +45,10 @@ export const studentNavItems = [
     title: "Notice Board",
     href: "/student-notifications",
     icon: Bell,
+  },
+  {
+    title: "Fees & Payments",
+    href: "/student-fees",
+    icon: CreditCard,
   },
 ];

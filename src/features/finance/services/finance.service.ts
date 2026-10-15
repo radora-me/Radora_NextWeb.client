@@ -2,7 +2,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { downloadFileWithAuth, fetchJsonWithAuth, fetchWithAuth } from "@/lib/api-client";
 
-export type FinanceResource = "dashboard" | "invoices" | "payments" | "expenses" | "journals" | "accounts" | "budgets" | "vendors" | "assets" | "categories" | "feeStructures" | "assignments" | "installments" | "discounts" | "scholarships" | "refunds" | "receipts" | "incomes" | "recurringExpenses" | "bankAccounts" | "payrollIntegrations";
+export type FinanceResource = "dashboard" | "invoices" | "deletedInvoices" | "payments" | "expenses" | "journals" | "accounts" | "budgets" | "vendors" | "assets" | "categories" | "feeStructures" | "assignments" | "installments" | "discounts" | "scholarships" | "refunds" | "receipts" | "incomes" | "recurringExpenses" | "bankAccounts" | "payrollIntegrations";
 
 export function useFinanceDashboard() {
   return useQuery<any>({ queryKey: ["finance-dashboard"], queryFn: () => fetchJsonWithAuth("/finance/dashboard"), staleTime: 30_000 });
@@ -27,6 +27,30 @@ export function useCreateFinanceRecord() {
     mutationFn: ({ type, body }: { type: "invoices" | "payments" | "expenses" | "journals"; body: unknown }) => mutation(`/finance/${type}`)(body),
     onSuccess: () => { client.invalidateQueries({ queryKey: ["finance-dashboard"] }); client.invalidateQueries({ queryKey: ["finance-resource"] }); },
   });
+}
+
+export function useDeleteFinanceInvoice() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: async (invoiceId: string) => {
+      const response = await fetchWithAuth(`/finance/invoices/${invoiceId}`, { method: "DELETE" });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || data.message || "Unable to delete fee due");
+      return data;
+    },
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: ["finance-dashboard"] });
+      client.invalidateQueries({ queryKey: ["finance-resource", "invoices"] });
+    },
+  });
+}
+
+export function viewFinanceReceipt(receiptId: string) {
+  if (typeof window !== "undefined") window.open(`/api/proxy/finance/receipts/${receiptId}/pdf`, "_blank", "noopener,noreferrer");
+}
+
+export function downloadFinanceReceipt(receiptId: string, receiptNumber: string) {
+  return downloadFileWithAuth(`/finance/receipts/${receiptId}/pdf`, `${receiptNumber}.pdf`);
 }
 
 export function useUpdateExpense() {

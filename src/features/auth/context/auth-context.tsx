@@ -13,6 +13,7 @@ const studentRoutePrefixes = [
   '/student-classroom-chat',
   '/student-homework',
   '/student-notifications',
+  '/student-fees',
 ];
 
 const teacherRoutePrefixes = [
