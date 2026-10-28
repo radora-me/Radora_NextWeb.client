@@ -3,45 +3,29 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import {
-  LayoutDashboard,
-  BookMarked,
-  QrCode,
-  BookOpen,
-  User,
-  LogOut,
-} from "lucide-react";
+import { LayoutDashboard, BookMarked, BookOpen, User, LogOut } from "lucide-react";
 import { useAuth } from "@/features/auth/context/auth-context";
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-  SidebarSeparator,
+  Sidebar, SidebarContent, SidebarFooter, SidebarGroup,
+  SidebarGroupContent, SidebarGroupLabel, SidebarHeader,
+  SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarSeparator,
 } from "@/components/ui/sidebar";
 
 const navigation = [
-  { name: "Dashboard", href: "/librarian-dashboard", icon: LayoutDashboard },
-  { name: "Book Registry", href: "/librarian-books", icon: BookMarked },
-  { name: "Issue / Return", href: "/librarian-issues", icon: BookOpen },
-  { name: "My Profile", href: "/librarian-profile", icon: User },
+  { name: "Dashboard",    href: "/librarian-dashboard", icon: LayoutDashboard },
+  { name: "Book Registry", href: "/librarian-books",    icon: BookMarked },
+  { name: "Issue / Return", href: "/librarian-issues",  icon: BookOpen },
+  { name: "My Profile",   href: "/librarian-profile",   icon: User },
 ];
 
 export function LibrarianSidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
 
-  const userName = user?.name || "Librarian";
+  const userName  = user?.name  || "Librarian";
   const userEmail = user?.email || "librarian@radora.com";
-  const initials = userName.split(" ").filter(Boolean).slice(0, 2).map((p) => p[0]).join("").toUpperCase() || "LB";
-
-  const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+  const initials  = userName.split(" ").filter(Boolean).slice(0, 2).map((p) => p[0]).join("").toUpperCase() || "LB";
+  const isActive  = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
   return (
     <Sidebar collapsible="icon" className="border-r-0">
@@ -66,22 +50,19 @@ export function LibrarianSidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navigation.map((item) => {
-                const active = isActive(item.href);
-                return (
-                  <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton
-                      render={<Link href={item.href} />}
-                      isActive={active}
-                      tooltip={item.name}
-                      className="h-9 transition-colors"
-                    >
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.name}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
+              {navigation.map((item) => (
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton
+                    render={<Link href={item.href} />}
+                    isActive={isActive(item.href)}
+                    tooltip={item.name}
+                    className="h-9 transition-colors"
+                  >
+                    <item.icon className="h-4 w-4" />
+                    <span>{item.name}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

@@ -10,6 +10,7 @@ import {
   Bell,
   CreditCard,
   Trophy,
+  BookMarked,
 } from 'lucide-react';
 
 import type { NavItem } from '@/types';
@@ -79,6 +80,12 @@ export const navItems: NavItem[] = [
     title: 'Fees & Payments',
     href: '/fees',
     icon: CreditCard,
+    roles: ['admin'],
+  },
+  {
+    title: 'Library',
+    href: '/library',
+    icon: BookMarked,
     roles: ['admin'],
   },
   {
