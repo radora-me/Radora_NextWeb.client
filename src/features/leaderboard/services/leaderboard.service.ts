@@ -1,0 +1,15 @@
+import { useQuery } from "@tanstack/react-query";
+import { fetchJsonWithAuth } from "@/lib/api-client";
+
+export type ScoreRecord = { type: "test" | "homework"; title: string; score: number; total: number; percentage: number | null; date: string; status?: string; feedback?: string | null };
+export type LeaderboardRow = { rank: number; student: { name: string; rollNumber?: string | null; profilePhotoUrl?: string | null }; rating: number; overallPercentage: number | null; testPercentage: number | null; homeworkPercentage: number | null; testsScored: number; homeworkScored: number; badge: { key: string; label: string; description: string }; rawScores?: { tests: ScoreRecord[]; homework: ScoreRecord[] } };
+export type StudentLeaderboardRow = { rank: number; student: { name: string }; rating: number; badge: { key: string; label: string; description: string } };
+export type StudentLeaderboardData = { course: { id: string; title: string; section?: string }; generatedAt: string; leaderboard: StudentLeaderboardRow[] };
+export type LeaderboardData = { course: { id: string; title: string; section?: string }; generatedAt: string; leaderboard: LeaderboardRow[]; analysis: { studentCount: number; ratedStudents: number; unratedStudents: number; averageRating: number; averagePercentage: number; topRating: number; distribution: { label: string; count: number }[]; performanceTrend: { label: string; averagePercentage: number; averageRating: number; scoredRecords: number }[]; scoredTests: number; scoredHomework: number } };
+export type LeaderboardSummary = { id: string; title: string; section?: string; studentCount: number; averageRating: number; averagePercentage: number; ratedStudents: number; distribution: { label: string; count: number }[]; performanceTrend: { label: string; averagePercentage: number; averageRating: number; scoredRecords: number }[] };
+const queryOptions = { staleTime: 30_000, gcTime: 5 * 60_000, refetchOnWindowFocus: false } as const;
+
+export function useLeaderboardCourses(role: "teacher" | "admin") { return useQuery<{ courses: { id: string; title: string; section?: string; studentCount: number }[] }>({ queryKey: [role, "leaderboard-courses"], queryFn: () => fetchJsonWithAuth(`/leaderboard/${role}/courses`), ...queryOptions }); }
+export function useClassLeaderboard(role: "teacher" | "admin", courseId: string | null) { return useQuery<LeaderboardData>({ queryKey: [role, "leaderboard", courseId], queryFn: () => fetchJsonWithAuth(`/leaderboard/${role}/${courseId}`), enabled: Boolean(courseId), ...queryOptions }); }
+export function useStudentLeaderboards() { return useQuery<{ courses: { id: string; title: string; section?: string; studentCount: number }[]; classes: StudentLeaderboardData[] }>({ queryKey: ["student", "leaderboards"], queryFn: () => fetchJsonWithAuth("/leaderboard/student"), ...queryOptions }); }
+export function useLeaderboardOverview(role: "teacher" | "admin", enabled = true) { return useQuery<{ courses: LeaderboardSummary[] }>({ queryKey: [role, "leaderboard-overview"], queryFn: () => fetchJsonWithAuth(`/leaderboard/${role}/overview`), enabled, ...queryOptions }); }

@@ -68,8 +68,14 @@ export function StudentHomework() {
   const [textSubmission, setTextSubmission] = useState("");
   const [attachedFiles, setAttachedFiles] = useState<LocalAttachment[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   const { mutate: submitHomework, isPending: isSubmitting } = useSubmitHomework();
+
+  const refreshHomework = async () => {
+    setIsRefreshing(true);
+    try { await refetch(); } finally { setIsRefreshing(false); }
+  };
 
   // Handle local file attachment
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -151,8 +157,9 @@ export function StudentHomework() {
           title="My Homework"
           description="View assignments, due dates, instructions, and download attachments."
         />
-        <Button variant="outline" size="sm" onClick={() => refetch()} className="bg-white border-indigo-100 hover:bg-indigo-50">
-          Refresh
+        <Button variant="outline" size="sm" onClick={refreshHomework} disabled={isRefreshing} className="bg-white border-indigo-100 hover:bg-indigo-50">
+          {isRefreshing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+          {isRefreshing ? "Refreshing..." : "Refresh"}
         </Button>
       </div>
 

@@ -62,7 +62,6 @@ export function useTeacherDeepStudentProfile(rollNumber: string | null) {
       // Flatten the nested studentProfile sub-document into a flat object
       const sp = raw.studentProfile || {};
       return {
-        id: raw.id,
         name: raw.name,
         rollNumber: raw.rollNumber,
         className: raw.className,
@@ -81,6 +80,24 @@ export function useTeacherDeepStudentProfile(rollNumber: string | null) {
       } as StudentProfileData;
     },
     enabled: !!rollNumber?.trim(),
+  });
+}
+
+export function useUploadStudentProfilePhoto() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ rollNumber, file }: { rollNumber: string; file: File }) => {
+      const body = new FormData();
+      body.append("photo", file);
+      const response = await fetchWithAuth(`/teacher/students/by-roll/${encodeURIComponent(rollNumber)}/profile-photo`, { method: "POST", body });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Failed to upload student photo");
+      return result as TeacherStudent;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["teacher-deep-student-profile", variables.rollNumber] });
+      queryClient.invalidateQueries({ queryKey: ["teacher-students"] });
+    },
   });
 }
 

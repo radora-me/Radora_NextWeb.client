@@ -1,5 +1,5 @@
-import { AttendancePage } from "@/features/attendance/components/attendance-page";
+import { TeacherAttendance } from "@/features/teacher/components/teacher-attendance";
 
 export default function Page(props: any) {
-  return <AttendancePage {...props} />;
+  return <TeacherAttendance {...props} />;
 }

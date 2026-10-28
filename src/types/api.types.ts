@@ -1,17 +1,19 @@
 import { UserRole } from "./index";
 
 export interface AdminProfileResponse {
-    id: string;
+    id?: string;
     name: string;
     email: string;
     role: string;
+    profilePhotoUrl?: string | null;
 }
 
 export interface AdminProfile {
-    id: string;
+    id?: string;
     name: string;
     email: string;
     role: string;
+    profilePhotoUrl?: string | null;
 }
 
 export interface AdminTeacher {
@@ -19,6 +21,7 @@ export interface AdminTeacher {
     name: string;
     email: string;
     address: string | null;
+    profilePhotoUrl?: string | null;
     courses: {
         id: string;
         title: string;
@@ -405,14 +408,87 @@ export interface Notice {
     attachments: NoticeAttachment[];
 }
 
+export type EventStatus = "UPCOMING" | "ONGOING" | "COMPLETED" | "CANCELLED";
+
+export type BookStatus = "AVAILABLE" | "ISSUED" | "LOST" | "DAMAGED";
+export type IssueStatus = "ISSUED" | "RETURNED" | "OVERDUE" | "LOST";
+
+export interface Book {
+  id: string;
+  bookId: string;
+  title: string;
+  author: string | null;
+  publisher: string | null;
+  isbn: string | null;
+  category: string | null;
+  totalCopies: number;
+  availableCopies: number;
+  status: BookStatus;
+  qrCode: string | null;
+  addedBy: { id: string; name: string };
+  issues: BookIssueRecord[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BookIssueRecord {
+  id: string;
+  book: { id: string; bookId: string; title: string; author: string | null };
+  student: { id: string; name: string; rollNumber: string; className: string | null };
+  issuedBy: { id: string; name: string };
+  issuedAt: string;
+  dueDate: string;
+  returnedAt: string | null;
+  status: IssueStatus;
+  notes: string | null;
+}
+
+export interface LibraryAdminOverview {
+  totalBooks: number;
+  totalIssued: number;
+  overdueCount: number;
+  recentIssues: BookIssueRecord[];
+}
+
+export interface LibrarianProfile {
+  id: string;
+  name: string;
+  email: string;
+  address: string | null;
+  profilePhotoUrl: string | null;
+  role: string;
+}
+
+export interface EventMedia {
+    id: string;
+    caption: string | null;
+    fileId: string;
+    url: string;
+    mimeType: string;
+    fileName: string;
+}
+
+export interface SchoolEvent {
+    id: string;
+    title: string;
+    description: string | null;
+    location: string | null;
+    startDate: string;
+    endDate: string | null;
+    status: EventStatus;
+    createdBy: { id: string; name: string };
+    createdAt: string;
+    updatedAt: string;
+    media: EventMedia[];
+}
+
 export interface AiTutorContextResponse {
     student: {
-        id: string;
         name: string;
         rollNumber: string;
         className: string;
         section: string;
-        courses: { id: string; title: string }[];
+        courses: { title: string }[];
         };
     attendance: {
         overallAttendance: number;
@@ -422,6 +498,75 @@ export interface AiTutorContextResponse {
         streak: number;
         recentRecords: { date: string; status: string; subject: string }[];
         };
+    homework: {
+        title: string;
+        course: string;
+        description: string | null;
+        instructions: string | null;
+        dueAt: string | null;
+        totalMarks: number | null;
+        submission: {
+            status: string;
+            marks: number | null;
+            feedback: string | null;
+            submittedAt: string | null;
+            gradedAt: string | null;
+        } | null;
+    }[];
+    tests: {
+        title: string;
+        course: string;
+        description: string | null;
+        durationMinutes: number;
+        availableFrom: string | null;
+        dueAt: string;
+        totalMarks: number;
+        resultPublished: boolean;
+        attempt: {
+            status: string;
+            score: number | null;
+            teacherMarks: number | null;
+            teacherFeedback: string | null;
+            violationCount: number;
+            startedAt: string | null;
+            submittedAt: string | null;
+        } | null;
+    }[];
+    leaderboard: {
+        course: string;
+        rank: number;
+        rating: number;
+        badge: string | null;
+        overallPercentage: number | null;
+        testPercentage: number | null;
+        homeworkPercentage: number | null;
+        testsScored: number;
+        homeworkScored: number;
+    }[];
+    leaves: {
+        fromDate: string;
+        toDate: string;
+        reason: string;
+        status: string;
+    }[];
+    timetable: {
+        name: string;
+        className: string;
+        section: string | null;
+        entries: {
+            day: string;
+            startTime: string;
+            endTime: string;
+            subject: string;
+            room: string | null;
+            teacher: string | null;
+        }[];
+    }[];
+    notices: {
+        title: string;
+        content: string;
+        createdAt: string;
+    }[];
     suggestedPrompts: string[];
 }
 
@@ -469,7 +614,6 @@ export interface CreateStudentResponse {
 }
 
 export interface SearchedStudent {
-    id: string;
     name: string;
       email?: string | null;
     rollNumber: string;
@@ -487,7 +631,6 @@ export interface TeacherCourse {
 }
 
 export interface TeacherStudent {
-    id: string;
     name: string;
     rollNumber: string;
     className: string;
@@ -497,7 +640,6 @@ export interface TeacherStudent {
 }
 
 export interface TeacherFoundStudent {
-    id: string;
     name: string;
     rollNumber: string;
     className: string;
@@ -507,14 +649,17 @@ export interface TeacherFoundStudent {
 }
 
 export interface TeacherProfileResponse {
-    id: string;
+    id?: string;
     name: string;
     email: string;
     address: string | null;
+    profilePhotoUrl?: string | null;
     courses: {
-        id: string;
+        id?: string;
         title: string;
         description: string | null;
+        section?: string | null;
+        studentCount?: number;
         _count: { enrollments: number };
         }[];
 }
@@ -565,7 +710,6 @@ export interface ClassTimetable {
     slots: TimetableSlot[];
 }
 export interface StudentProfileData {
-  id: string;
   name: string;
   rollNumber?: string;
   className?: string;

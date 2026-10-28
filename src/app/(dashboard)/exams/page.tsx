@@ -1,5 +1,5 @@
-import { ExamsPage } from "@/features/exams/components/exams-page";
+import { AdminTests } from "@/features/proctored-tests/components/admin-tests";
 
 export default function Page(props: any) {
-  return <ExamsPage {...props} />;
+  return <AdminTests {...props} />;
 }

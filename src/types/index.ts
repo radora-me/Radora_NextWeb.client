@@ -1,6 +1,6 @@
 import type React from 'react';
 
-export type UserRole = 'admin' | 'teacher' | 'student';
+export type UserRole = 'admin' | 'teacher' | 'student' | 'librarian';
 
 export interface User {
   id: string;

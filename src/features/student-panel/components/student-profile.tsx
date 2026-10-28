@@ -7,7 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchJsonWithAuth } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ProfilePhoto } from "@/components/shared/profile-photo";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
@@ -23,16 +23,18 @@ function InfoField({ label, value }: { label: string; value?: string }) {
   );
 }
 
+const isInternalId = (value?: string | null) => Boolean(value && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value));
+const safeClassLabel = (value?: string | null) => value && !isInternalId(value) ? value : "Unassigned class";
+
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface StudentCourse {
-  id: string;
+  id?: string;
   title: string;
   description: string;
 }
 
 interface StudentProfileData {
-  id: string;
   name: string;
   rollNumber: string;
   className: string;
@@ -111,8 +113,6 @@ export function StudentProfile() {
     );
   }
 
-  const getInitials = (name: string) => name.split(" ").map(n => n[0]).join("").toUpperCase().substring(0, 2);
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
@@ -128,12 +128,7 @@ export function StudentProfile() {
               <ArrowLeft className="h-4 w-4" />
             </Button>
           </Link>
-          <Avatar className="h-16 w-16 shadow-sm">
-            <AvatarImage src={profile.profilePhotoUrl || ""} alt={profile.name} className="object-cover" />
-            <AvatarFallback className="bg-gradient-to-br from-indigo-400 to-indigo-600 text-white text-lg font-bold">
-              {getInitials(profile.name)}
-            </AvatarFallback>
-          </Avatar>
+          <ProfilePhoto name={profile.name} url={profile.profilePhotoUrl} />
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-bold text-slate-900">
@@ -145,10 +140,9 @@ export function StudentProfile() {
             </div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-sm text-slate-500">
               <span className="font-medium text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md">
-                Class {profile.className} — Section {profile.section}
+                {safeClassLabel(profile.className)} — Section {profile.section || "N/A"}
               </span>
               <span>Roll #{profile.rollNumber}</span>
-              <span className="text-slate-400">ID: {profile.id}</span>
             </div>
           </div>
         </div>
@@ -257,9 +251,9 @@ export function StudentProfile() {
               {profile.courses.length > 0 ? (
                 <div className="divide-y divide-slate-100">
                   {profile.courses.map((course: any) => (
-                    <div key={course.id} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                    <div key={course.title} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
                       <div>
-                        <p className="font-medium text-slate-900">{course.title}</p>
+                        <p className="font-medium text-slate-900">{safeClassLabel(course.title)}</p>
                         <p className="text-sm text-slate-500">Section {course.description || "N/A"}</p>
                       </div>
                       <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">Active</Badge>

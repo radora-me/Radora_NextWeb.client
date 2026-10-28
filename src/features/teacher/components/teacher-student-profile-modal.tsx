@@ -12,15 +12,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Loader2, User, Phone, MapPin, HeartPulse, Edit2, Save, X,
-  UserCircle, GraduationCap, Hash,
+  GraduationCap, Hash,
 } from "lucide-react";
 import {
   useTeacherDeepStudentProfile,
   useUpdateStudentProfile,
+  useUploadStudentProfilePhoto,
 } from "@/features/students/services";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ProfilePhoto } from "@/components/shared/profile-photo";
 
 function InfoRow({ label, value }: { label: string; value?: string | null }) {
   return (
@@ -30,6 +31,9 @@ function InfoRow({ label, value }: { label: string; value?: string | null }) {
     </div>
   );
 }
+
+const isInternalId = (value?: string | null) => Boolean(value && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value));
+const safeClassLabel = (value?: string | null) => value && !isInternalId(value) ? value : "Unassigned class";
 
 function EditField({
   label,
@@ -55,10 +59,6 @@ function EditField({
   );
 }
 
-function getInitials(name: string) {
-  return name.split(" ").map((n) => n[0]).join("").toUpperCase().substring(0, 2);
-}
-
 export function TeacherStudentProfileModal({
   rollNumber,
   open,
@@ -70,6 +70,7 @@ export function TeacherStudentProfileModal({
 }) {
   const { data: profile, isLoading, isError } = useTeacherDeepStudentProfile(rollNumber);
   const { mutate: updateProfile, isPending: isUpdating } = useUpdateStudentProfile();
+  const { mutate: uploadPhoto, isPending: isUploadingPhoto } = useUploadStudentProfilePhoto();
   const [isEditing, setIsEditing] = useState(false);
 
   // ── Form state (uses backend field names) ──
@@ -159,12 +160,17 @@ export function TeacherStudentProfileModal({
         <DialogHeader className="p-5 pb-4 border-b border-slate-100 bg-gradient-to-r from-indigo-50 to-purple-50">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Avatar className="h-12 w-12 ring-2 ring-white shadow-sm">
-                <AvatarImage src={profile?.profilePhotoUrl || ""} />
-                <AvatarFallback className="bg-gradient-to-br from-indigo-400 to-purple-500 text-white font-bold text-sm">
-                  {profile?.name ? getInitials(profile.name) : <UserCircle className="h-5 w-5" />}
-                </AvatarFallback>
-              </Avatar>
+              <ProfilePhoto
+                name={profile?.name || "Student"}
+                url={profile?.profilePhotoUrl}
+                size="sm"
+                canUpload={!!profile && !!rollNumber}
+                uploading={isUploadingPhoto}
+                onUpload={(file) => rollNumber && uploadPhoto({ rollNumber, file }, {
+                  onSuccess: () => toast.success("Student profile photo updated"),
+                  onError: (err) => toast.error(err.message),
+                })}
+              />
               <div>
                 <DialogTitle className="text-base font-bold text-slate-900">
                   {profile?.name || "Student Profile"}
@@ -175,7 +181,7 @@ export function TeacherStudentProfileModal({
                   </Badge>
                   {profile?.className && (
                     <Badge variant="outline" className="text-[10px] bg-indigo-50 text-indigo-700 border-indigo-200 gap-1">
-                      <GraduationCap className="h-2.5 w-2.5" />Class {profile.className}
+                      <GraduationCap className="h-2.5 w-2.5" />{safeClassLabel(profile.className)}
                     </Badge>
                   )}
                 </div>

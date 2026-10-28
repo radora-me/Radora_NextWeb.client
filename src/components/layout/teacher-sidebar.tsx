@@ -8,7 +8,10 @@ import {
   LayoutDashboard,
   Users,
   CalendarCheck,
+  CalendarDays,
   BookOpen,
+  ClipboardCheck,
+  Trophy,
   MessageSquare,
   LogOut,
   Settings,
@@ -34,7 +37,10 @@ const navigation = [
   { name: "My Students", href: "/teacher-students", icon: Users },
   { name: "Attendance", href: "/teacher-attendance", icon: CalendarCheck },
   { name: "Homework & Grades", href: "/teacher-homework", icon: BookOpen },
+  { name: "Proctored Tests", href: "/teacher-tests", icon: ClipboardCheck },
+  { name: "Class Leaderboard", href: "/teacher-leaderboard", icon: Trophy },
   { name: "Classroom Chat", href: "/teacher-chat", icon: MessageSquare },
+  { name: "Events & Gallery", href: "/teacher-events", icon: CalendarDays },
   { name: "Notice Board", href: "/teacher-notifications", icon: Bell },
 ];
 
@@ -77,7 +83,7 @@ export function TeacherSidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navigation.filter((item) => !user?.isSubjectTeacher || ["/teacher-homework", "/teacher-chat", "/teacher-notifications", "/teacher-dashboard"].includes(item.href)).map((item) => {
+              {navigation.filter((item) => !user?.isSubjectTeacher || ["/teacher-homework", "/teacher-tests", "/teacher-leaderboard", "/teacher-chat", "/teacher-notifications", "/teacher-dashboard"].includes(item.href)).map((item) => {
                 const active = isActive(item.href);
                 return (
                   <SidebarMenuItem key={item.href}>

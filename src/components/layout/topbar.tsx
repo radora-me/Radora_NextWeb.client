@@ -9,7 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,6 +30,7 @@ const routeLabels: Record<string, string> = {
   "/fees": "Fee Management",
   "/notifications": "Notifications",
   "/settings": "Settings",
+  "/admin-profile": "Profile",
 };
 
 function getBreadcrumb(pathname: string): string {
@@ -52,7 +53,7 @@ export function Topbar() {
   const handleProfile = () => {
     if (user?.role === "teacher") router.push("/teacher-profile");
     else if (user?.role === "student") router.push("/student-profile");
-    else router.push("/dashboard");
+    else router.push("/admin-profile");
   };
 
   const handleNotifications = () => {
@@ -91,6 +92,7 @@ export function Topbar() {
         <DropdownMenu>
           <DropdownMenuTrigger className="inline-flex h-8 items-center gap-2 rounded-md pl-1.5 pr-2 hover:bg-muted cursor-pointer">
               <Avatar className="h-6 w-6">
+                <AvatarImage src={user?.image || ""} alt={userName} />
                 <AvatarFallback className="bg-gradient-to-br from-indigo-400 to-indigo-600 text-[10px] font-bold text-white">
                   {initials}
                 </AvatarFallback>

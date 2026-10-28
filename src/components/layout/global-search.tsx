@@ -19,6 +19,7 @@ import {
   Bot,
   Hash,
   ChevronRight,
+  Trophy,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -41,7 +42,7 @@ const GLOBAL_PAGES: NavigationPage[] = [
   { title: "Students Directory", path: "/students", category: "Navigation", icon: GraduationCap, roles: ["admin"] },
   { title: "Teachers Directory", path: "/teachers", category: "Navigation", icon: Users, roles: ["admin"] },
   { title: "Attendance", path: "/attendance", category: "Navigation", icon: CalendarCheck, roles: ["admin"] },
-  { title: "Exams & Grades", path: "/exams", category: "Navigation", icon: FileText, roles: ["admin"] },
+  { title: "Proctored Tests", path: "/exams", category: "Navigation", icon: FileText, roles: ["admin"] },
   { title: "Timetable", path: "/timetable", category: "Navigation", icon: Clock, roles: ["admin"] },
   { title: "Fee Management", path: "/fees", category: "Navigation", icon: CreditCard, roles: ["admin"] },
   { title: "Notifications", path: "/notifications", category: "Navigation", icon: Bell, roles: ["admin"] },
@@ -52,6 +53,8 @@ const GLOBAL_PAGES: NavigationPage[] = [
   { title: "My Students", path: "/teacher-students", category: "Navigation", icon: GraduationCap, roles: ["teacher"] },
   { title: "Mark Attendance", path: "/teacher-attendance", category: "Navigation", icon: CalendarCheck, roles: ["teacher"] },
   { title: "Homework & Grades", path: "/teacher-homework", category: "Navigation", icon: BookOpen, roles: ["teacher"] },
+  { title: "Proctored Tests", path: "/teacher-tests", category: "Navigation", icon: FileText, roles: ["teacher"] },
+  { title: "Class Leaderboard", path: "/teacher-leaderboard", category: "Navigation", icon: Trophy, roles: ["teacher"] },
   { title: "Classroom Chat", path: "/teacher-chat", category: "Navigation", icon: MessageSquare, roles: ["teacher"] },
   { title: "Notifications", path: "/teacher-notifications", category: "Navigation", icon: Bell, roles: ["teacher"] },
   { title: "My Profile", path: "/teacher-profile", category: "Navigation", icon: User, roles: ["teacher"] },
@@ -62,6 +65,8 @@ const GLOBAL_PAGES: NavigationPage[] = [
   { title: "Classroom Chat", path: "/student-classroom-chat", category: "Navigation", icon: MessageSquare, roles: ["student"] },
   { title: "My Attendance", path: "/student-attendance", category: "Navigation", icon: CalendarCheck, roles: ["student"] },
   { title: "My Homework", path: "/student-homework", category: "Navigation", icon: BookOpen, roles: ["student"] },
+  { title: "Proctored Tests", path: "/student-tests", category: "Navigation", icon: FileText, roles: ["student"] },
+  { title: "Class Leaderboard", path: "/student-leaderboard", category: "Navigation", icon: Trophy, roles: ["student"] },
   { title: "My Timetable", path: "/student-timetable", category: "Navigation", icon: Clock, roles: ["student"] },
   { title: "Notifications", path: "/student-notifications", category: "Navigation", icon: Bell, roles: ["student"] },
   { title: "My Profile", path: "/student-profile", category: "Navigation", icon: User, roles: ["student"] },
@@ -215,7 +220,7 @@ export function GlobalSearch() {
                   <div className="space-y-0.5">
                     {matchingStudents.map((s) => (
                       <button
-                        key={s.id}
+                        key={s.rollNumber}
                         onClick={() => handleSelectStudent(s.rollNumber)}
                         className="w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-left text-xs hover:bg-indigo-50 dark:hover:bg-zinc-900 transition-colors group"
                       >

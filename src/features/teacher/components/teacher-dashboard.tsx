@@ -14,6 +14,8 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTeacherStudents } from "@/features/students/services";
 import { useAuth } from "@/features/auth/context/auth-context";
+import { useLeaderboardOverview } from "@/features/leaderboard/services/leaderboard.service";
+import { OverviewVisuals } from "@/features/leaderboard/components/leaderboard-visuals";
 import {
   useTeacherCourses,
   useTeacherHomeworkList,
@@ -53,6 +55,7 @@ export function TeacherDashboard() {
     isLoading: homeworkLoading,
     isError: homeworkError,
   } = useTeacherHomeworkList();
+  const { data: leaderboardOverview } = useLeaderboardOverview("teacher");
 
   // ── Derived stats ──
   const totalStudents = useMemo(() => students?.length ?? 0, [students]);
@@ -171,6 +174,8 @@ export function TeacherDashboard() {
           </>
         )}
       </div>
+
+      <OverviewVisuals courses={leaderboardOverview?.courses || []} />
 
       {/* ── Bottom Section ── */}
       <div className="grid gap-6 md:grid-cols-2">

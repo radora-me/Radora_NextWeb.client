@@ -7,6 +7,7 @@ import {
   Users,
   ClipboardCheck,
   CreditCard,
+  BookOpen,
   TrendingUp,
   TrendingDown,
   Calendar,
@@ -29,8 +30,10 @@ import {
   upcomingEvents,
   recentActivities,
 } from "@/features/dashboard/data/mock-dashboard";
-import { useHolidays } from "@/features/dashboard/services";
+import { useAdminDashboardOverview, useHolidays } from "@/features/dashboard/services";
 import { useAuth } from "@/features/auth/context/auth-context";
+import { useLeaderboardOverview } from "@/features/leaderboard/services/leaderboard.service";
+import { OverviewVisuals } from "@/features/leaderboard/components/leaderboard-visuals";
 
 const fadeIn = {
   initial: { opacity: 0, y: 16 },
@@ -65,6 +68,8 @@ export function DashboardPage() {
 
   const { user } = useAuth();
   const { data: dbHolidays } = useHolidays(user?.role as any);
+  const { data: liveDashboard } = useAdminDashboardOverview(user?.role);
+  const { data: leaderboardOverview } = useLeaderboardOverview("admin", user?.role === "admin");
 
   useEffect(() => {
     // Load student counts
@@ -105,6 +110,32 @@ export function DashboardPage() {
     return all.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }, [dbHolidays]);
 
+  const isAdminDashboard = user?.role === "admin";
+  const dashboardStudentCount = isAdminDashboard ? (liveDashboard?.stats.studentCount ?? 0) : studentCount;
+  const dashboardTeacherCount = isAdminDashboard ? (liveDashboard?.stats.teacherCount ?? 0) : teacherCount;
+  const dashboardAttendanceData = isAdminDashboard ? (liveDashboard?.attendanceTrend ?? []) : attendanceData;
+  const dashboardGradeDistribution = isAdminDashboard ? (liveDashboard?.gradeDistribution ?? []) : gradeDistribution;
+  const dashboardEvents = isAdminDashboard ? (liveDashboard?.upcomingEvents || []) : mergedEvents;
+  const dashboardActivities = isAdminDashboard ? (liveDashboard?.recentActivities || []) : recentActivities;
+  const dashboardAttendanceRate = isAdminDashboard ? (liveDashboard?.stats.attendanceRate ?? 0) : 94.2;
+  const gradeTotal = dashboardGradeDistribution.reduce((sum, item) => sum + item.students, 0);
+  const trendPoints = isAdminDashboard
+    ? (liveDashboard?.attendanceTrend || []).filter((item) => item.total > 0)
+    : attendanceData;
+  const currentTrend = trendPoints.at(-1)?.attendance ?? 0;
+  const previousTrend = trendPoints.at(-2)?.attendance ?? currentTrend;
+  const trendDelta = isAdminDashboard ? Number((currentTrend - previousTrend).toFixed(1)) : 2.1;
+  const formatActivityTime = (value: string) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    const minutes = Math.max(0, Math.floor((Date.now() - date.getTime()) / 60000));
+    if (minutes < 1) return "Just now";
+    if (minutes < 60) return `${minutes} min ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} hr ago`;
+    return `${Math.floor(hours / 24)} days ago`;
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -120,31 +151,31 @@ export function DashboardPage() {
       >
         <StatCard
           title="Total Students"
-          value={studentCount.toLocaleString("en-IN")}
-          change="+12%"
+          value={dashboardStudentCount.toLocaleString("en-IN")}
+          change={isAdminDashboard ? "Live" : "+12%"}
           trend="positive"
           icon={GraduationCap}
         />
         <StatCard
           title="Total Teachers"
-          value={teacherCount.toLocaleString("en-IN")}
-          change="+3%"
+          value={dashboardTeacherCount.toLocaleString("en-IN")}
+          change={isAdminDashboard ? "Live" : "+3%"}
           trend="positive"
           icon={Users}
         />
         <StatCard
           title="Attendance Rate"
-          value="94.2%"
-          change="-1.5%"
-          trend="negative"
+          value={`${dashboardAttendanceRate}%`}
+          change={isAdminDashboard ? "Live" : "-1.5%"}
+          trend={isAdminDashboard ? (trendDelta >= 0 ? "positive" : "negative") : "negative"}
           icon={ClipboardCheck}
         />
         <StatCard
-          title="Revenue"
-          value="₹12.4L"
-          change="+8.2%"
+          title={isAdminDashboard ? "Homework Assigned" : "Revenue"}
+          value={isAdminDashboard ? (liveDashboard?.stats.homeworkCount ?? 0).toLocaleString("en-IN") : "₹12.4L"}
+          change={isAdminDashboard ? "Live" : "+8.2%"}
           trend="positive"
-          icon={CreditCard}
+          icon={isAdminDashboard ? BookOpen : CreditCard}
         />
       </motion.div>
 
@@ -162,8 +193,8 @@ export function DashboardPage() {
                 Attendance Trend
               </CardTitle>
               <div className="flex items-center gap-1 text-xs text-emerald-600">
-                <TrendingUp className="h-3 w-3" />
-                <span>+2.1%</span>
+                {trendDelta >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                <span>{trendDelta >= 0 ? "+" : ""}{trendDelta}%</span>
               </div>
             </div>
             <p className="text-xs text-muted-foreground">
@@ -172,7 +203,7 @@ export function DashboardPage() {
           </CardHeader>
           <CardContent className="pt-0">
             <ChartContainer config={attendanceChartConfig} className="h-[220px] w-full">
-              <AreaChart data={attendanceData}>
+              <AreaChart data={dashboardAttendanceData}>
                 <defs>
                   <linearGradient id="attendanceGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="var(--color-chart-1)" stopOpacity={0.3} />
@@ -181,7 +212,7 @@ export function DashboardPage() {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
                 <XAxis dataKey="month" tickLine={false} axisLine={false} fontSize={11} tickMargin={8} />
-                <YAxis domain={[85, 100]} tickLine={false} axisLine={false} fontSize={11} tickMargin={8} />
+                <YAxis domain={[0, 100]} tickLine={false} axisLine={false} fontSize={11} tickMargin={8} />
                 <ChartTooltip content={<ChartTooltipContent />} />
                 <Area
                   type="monotone"
@@ -203,7 +234,7 @@ export function DashboardPage() {
                 Grade Distribution
               </CardTitle>
               <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                <span>Total: 330 students</span>
+                <span>Total: {gradeTotal} {isAdminDashboard ? "graded submissions" : "students"}</span>
               </div>
             </div>
             <p className="text-xs text-muted-foreground">
@@ -212,7 +243,7 @@ export function DashboardPage() {
           </CardHeader>
           <CardContent className="pt-0">
             <ChartContainer config={gradeChartConfig} className="h-[220px] w-full">
-              <BarChart data={gradeDistribution}>
+              <BarChart data={dashboardGradeDistribution}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
                 <XAxis dataKey="grade" tickLine={false} axisLine={false} fontSize={11} tickMargin={8} />
                 <YAxis tickLine={false} axisLine={false} fontSize={11} tickMargin={8} />
@@ -223,6 +254,8 @@ export function DashboardPage() {
           </CardContent>
         </Card>
       </motion.div>
+
+      {isAdminDashboard && <OverviewVisuals courses={leaderboardOverview?.courses || []} />}
 
       {/* Events & Activity Row */}
       <motion.div
@@ -242,7 +275,7 @@ export function DashboardPage() {
           </CardHeader>
           <CardContent className="pt-0">
             <div className="space-y-3">
-              {mergedEvents.slice(0, 6).map((event) => (
+              {dashboardEvents.slice(0, 6).map((event) => (
                 <div
                   key={event.id}
                   className="flex items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
@@ -287,7 +320,7 @@ export function DashboardPage() {
           </CardHeader>
           <CardContent className="pt-0">
             <div className="space-y-3">
-              {recentActivities.slice(0, 7).map((activity) => (
+              {dashboardActivities.slice(0, 7).map((activity) => (
                 <div key={activity.id} className="flex items-start gap-3">
                   <Avatar className="h-7 w-7 mt-0.5 shrink-0">
                     <AvatarFallback className="bg-muted text-[10px] font-medium">
@@ -306,7 +339,7 @@ export function DashboardPage() {
                       <span className="font-medium">{activity.target}</span>
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {activity.timestamp}
+                      {formatActivityTime(activity.timestamp)}
                     </p>
                   </div>
                 </div>

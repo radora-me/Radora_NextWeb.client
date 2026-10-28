@@ -39,6 +39,12 @@ function getInitials(name: string) {
   return name.split(" ").map((n) => n[0]).join("").toUpperCase().substring(0, 2);
 }
 
+function safeClassLabel(value?: string | null) {
+  return value && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
+    ? value
+    : "Unassigned class";
+}
+
 export function StudentsPage() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -65,7 +71,7 @@ export function StudentsPage() {
   useEffect(() => {
     if (searchedStudent) {
       setFoundStudents((prev) => {
-        const exists = prev.some((s) => s.id === searchedStudent.id);
+        const exists = prev.some((s) => s.rollNumber === searchedStudent.rollNumber);
         if (exists) return prev;
         return [searchedStudent, ...prev];
       });
@@ -162,7 +168,7 @@ export function StudentsPage() {
                 </TableRow>
               ) : (
                 paginated.map((student: any) => (
-                  <TableRow key={student.id} className="hover:bg-muted/50 transition-colors">
+                  <TableRow key={student.rollNumber} className="hover:bg-muted/50 transition-colors">
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <Avatar className="h-8 w-8">
@@ -179,7 +185,7 @@ export function StudentsPage() {
                     <TableCell>
                       {student.className ? (
                         <Badge variant="secondary" className="bg-indigo-50 text-indigo-700 text-xs">
-                          Class {student.className}
+                          {safeClassLabel(student.className)}
                         </Badge>
                       ) : (
                         <span className="text-xs text-muted-foreground">Not assigned</span>

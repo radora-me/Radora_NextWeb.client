@@ -1,12 +1,15 @@
 import {
   LayoutDashboard,
   Calendar,
+  CalendarDays,
   Clock,
   Bot,
   MessageSquare,
   BookOpen,
+  ClipboardCheck,
   Bell,
   CreditCard,
+  Trophy,
 } from "lucide-react";
 
 export const studentNavItems = [
@@ -26,9 +29,24 @@ export const studentNavItems = [
     icon: BookOpen,
   },
   {
+    title: "Proctored Tests",
+    href: "/student-tests",
+    icon: ClipboardCheck,
+  },
+  {
+    title: "Class Leaderboard",
+    href: "/student-leaderboard",
+    icon: Trophy,
+  },
+  {
     title: "Timetable",
     href: "/student-timetable",
     icon: Calendar,
+  },
+  {
+    title: "Events & Gallery",
+    href: "/student-events",
+    icon: CalendarDays,
   },
   {
     title: "AI Assistant",

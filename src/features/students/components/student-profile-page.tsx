@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { ProfilePhoto } from "@/components/shared/profile-photo";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -26,6 +26,9 @@ function InfoField({ label, value }: { label: string; value?: string | null }) {
     </div>
   );
 }
+
+const isInternalId = (value?: string | null) => Boolean(value && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value));
+const safeClassLabel = (value?: string | null) => value && !isInternalId(value) ? value : "Unassigned class";
 
 export function StudentProfilePage() {
   // The [id] route param is actually the rollNumber passed from the students list
@@ -74,9 +77,6 @@ export function StudentProfilePage() {
     );
   }
 
-  const getInitials = (name: string) =>
-    name.split(" ").map((n) => n[0]).join("").toUpperCase().substring(0, 2);
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
@@ -92,11 +92,7 @@ export function StudentProfilePage() {
               <ArrowLeft className="h-4 w-4" />
             </Button>
           </Link>
-          <Avatar className="h-16 w-16">
-            <AvatarFallback className="bg-gradient-to-br from-indigo-400 to-indigo-600 text-white text-lg font-bold">
-              {getInitials(student.name)}
-            </AvatarFallback>
-          </Avatar>
+          <ProfilePhoto name={student.name} url={student.profilePhotoUrl} />
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-bold">{student.name}</h1>
@@ -110,7 +106,7 @@ export function StudentProfilePage() {
               </span>
               {student.className && (
                 <span className="flex items-center gap-1">
-                  <GraduationCap className="h-3.5 w-3.5" />Class {student.className}
+                  <GraduationCap className="h-3.5 w-3.5" />{safeClassLabel(student.className)}
                 </span>
               )}
             </div>
@@ -138,7 +134,7 @@ export function StudentProfilePage() {
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Class</p>
-              <p className="text-sm font-medium">{student.className || "Not assigned"}</p>
+              <p className="text-sm font-medium">{safeClassLabel(student.className)}</p>
             </div>
           </div>
         </Card>
@@ -172,7 +168,7 @@ export function StudentProfilePage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 <InfoField label="Full Name" value={student.name} />
                 <InfoField label="Roll Number" value={student.rollNumber} />
-                <InfoField label="Class" value={student.className} />
+                <InfoField label="Class" value={safeClassLabel(student.className)} />
               </div>
 
               {!student.className && (

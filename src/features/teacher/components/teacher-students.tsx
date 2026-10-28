@@ -245,7 +245,7 @@ export function TeacherStudents() {
                   ) : filteredStudents.length > 0 ? (
                     filteredStudents.map((student) => (
                       <TableRow
-                        key={student.id}
+                        key={student.rollNumber}
                         className="border-slate-200 dark:border-slate-800 hover:bg-slate-50/50 dark:hover:bg-slate-900/50"
                       >
                         <TableCell className="font-medium text-slate-900 dark:text-slate-100">

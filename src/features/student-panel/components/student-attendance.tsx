@@ -40,15 +40,26 @@ export function StudentAttendance() {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [reason, setReason] = useState("");
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const tomorrowStr = new Date(Date.now() + 86400000).toLocaleDateString("en-CA");
 
   const { data: attendanceData, isLoading: isAttendanceLoading } = useStudentAttendance();
   const { data: leaveHistory, isLoading: isLeaveLoading, refetch: refetchLeave } = useLeaveHistory();
   const { mutate: applyLeave, isPending: isApplying } = useApplyLeave();
 
+  const refreshLeaveHistory = async () => {
+    setIsRefreshing(true);
+    try { await refetchLeave(); } finally { setIsRefreshing(false); }
+  };
+
   const handleApplyLeave = (e: React.FormEvent) => {
     e.preventDefault();
     if (!fromDate || !toDate || !reason) {
       toast.error("Please fill in all fields.");
+      return;
+    }
+    if (fromDate < tomorrowStr || toDate < tomorrowStr || toDate < fromDate) {
+      toast.error("Leave dates must be future dates and the end date cannot be before the start date.");
       return;
     }
 
@@ -206,6 +217,7 @@ export function StudentAttendance() {
                       <Input 
                         id="from-date" 
                         type="date" 
+                        min={tomorrowStr}
                         value={fromDate}
                         onChange={(e) => setFromDate(e.target.value)}
                         required 
@@ -216,6 +228,7 @@ export function StudentAttendance() {
                       <Input 
                         id="to-date" 
                         type="date" 
+                        min={fromDate || tomorrowStr}
                         value={toDate}
                         onChange={(e) => setToDate(e.target.value)}
                         required 
@@ -243,9 +256,9 @@ export function StudentAttendance() {
               <TabsContent value="leave-history" className="p-6 m-0">
                 <div className="flex justify-between items-center mb-4">
                   <span className="text-xs text-muted-foreground">List of all leave requests submitted.</span>
-                  <Button variant="ghost" size="sm" onClick={() => refetchLeave()} className="h-7 text-xs">
-                    <RefreshCw className="h-3 w-3 mr-1" />
-                    Refresh
+                  <Button variant="ghost" size="sm" onClick={refreshLeaveHistory} disabled={isRefreshing} className="h-7 text-xs">
+                    {isRefreshing ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <RefreshCw className="h-3 w-3 mr-1" />}
+                    {isRefreshing ? "Refreshing..." : "Refresh"}
                   </Button>
                 </div>
                 <div className="space-y-4">

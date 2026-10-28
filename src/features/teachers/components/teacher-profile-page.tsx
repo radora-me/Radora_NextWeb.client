@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { ProfilePhoto } from "@/components/shared/profile-photo";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
@@ -163,11 +163,7 @@ export function TeacherProfilePage() {
                 <ArrowLeft className="h-4 w-4" />
               </Button>
             </Link>
-            <Avatar className="h-16 w-16">
-              <AvatarFallback className="bg-gradient-to-br from-purple-400 to-purple-600 text-white text-lg font-bold">
-                {teacher.name?.split(" ").map((n) => n[0]).join("").toUpperCase().substring(0, 2) || "TC"}
-              </AvatarFallback>
-            </Avatar>
+            <ProfilePhoto name={teacher.name} url={teacher.profilePhotoUrl} />
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-2xl font-bold">{teacher.name}</h1>
@@ -177,7 +173,6 @@ export function TeacherProfilePage() {
               </div>
               <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground flex-wrap">
                 <span className="flex items-center gap-1"><Mail className="h-3.5 w-3.5" />{teacher.email}</span>
-                <span>ID: {teacher.id.substring(0, 8).toUpperCase()}</span>
               </div>
             </div>
           </div>

@@ -30,16 +30,21 @@ async function proxyRequest(
   const search = req.nextUrl.search; // preserve query params
   const url = `${API_BASE}/${backendPath}${search}`;
 
+  const incomingContentType = req.headers.get("content-type") || "";
   const headers: Record<string, string> = {
     Authorization: `Bearer ${decodeURIComponent(accessToken)}`,
-    "Content-Type": "application/json",
   };
+  if (incomingContentType) headers["Content-Type"] = incomingContentType;
 
   let body: BodyInit | null = null;
   if (req.method !== "GET" && req.method !== "DELETE") {
     try {
-      const text = await req.text();
-      if (text) body = text;
+      if (incomingContentType.toLowerCase().includes("multipart/form-data")) {
+        body = await req.arrayBuffer();
+      } else {
+        const text = await req.text();
+        if (text) body = text;
+      }
     } catch {
       // no body
     }

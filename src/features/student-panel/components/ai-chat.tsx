@@ -33,6 +33,55 @@ export function StudentAIChat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
+  const typingQueueRef = useRef<string[]>([]);
+  const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const typingResolversRef = useRef<(() => void)[]>([]);
+
+  const sanitizeStreamText = (text: string) =>
+    text
+      .replace(/\*\*/g, "")
+      .replace(/#{2,6}/g, "")
+      .replace(/^\s*#{1,6}\s*/gm, "");
+
+  const pumpAssistantTyping = (messageId: string) => {
+    const character = typingQueueRef.current.shift();
+
+    if (!character) {
+      typingTimerRef.current = null;
+      typingResolversRef.current.splice(0).forEach((resolve) => resolve());
+      return;
+    }
+
+    setMessages((prev) =>
+      prev.map((message) =>
+        message.id === messageId
+          ? { ...message, content: `${message.content}${character}` }
+          : message,
+      ),
+    );
+    typingTimerRef.current = setTimeout(() => pumpAssistantTyping(messageId), 9);
+  };
+
+  const enqueueAssistantText = (messageId: string, text: string) => {
+    typingQueueRef.current.push(...sanitizeStreamText(text).split(""));
+    if (!typingTimerRef.current) pumpAssistantTyping(messageId);
+  };
+
+  const waitForAssistantTyping = () =>
+    new Promise<void>((resolve) => {
+      if (!typingQueueRef.current.length && !typingTimerRef.current) {
+        resolve();
+        return;
+      }
+      typingResolversRef.current.push(resolve);
+    });
+
+  useEffect(
+    () => () => {
+      if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+    },
+    [],
+  );
 
   // Initialize with welcome message when context loads
   useEffect(() => {
@@ -63,8 +112,16 @@ export function StudentAIChat() {
       content: messageText,
       timestamp: new Date(),
     };
+    const assistantMessageId = `${Date.now()}-assistant`;
+    const assistantMessage: Message = {
+      id: assistantMessageId,
+      role: "assistant",
+      content: "",
+      timestamp: new Date(),
+    };
 
-    setMessages((prev) => [...prev, userMessage]);
+    typingQueueRef.current = [];
+    setMessages((prev) => [...prev, userMessage, assistantMessage]);
     setInput("");
 
     try {
@@ -72,19 +129,26 @@ export function StudentAIChat() {
       const response = await sendMutation.mutateAsync({
         message: messageText,
         history,
+        onToken: (token) => enqueueAssistantText(assistantMessageId, token),
       });
 
-      const aiResponse: Message = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content: response.reply,
-        timestamp: new Date(),
-      };
-
-      setMessages((prev) => [...prev, aiResponse]);
+      await waitForAssistantTyping();
+      setMessages((prev) =>
+        prev.map((message) =>
+          message.id === assistantMessageId
+            ? { ...message, content: sanitizeStreamText(response.reply) }
+            : message,
+        ),
+      );
     } catch (error) {
       alert("Failed to get response from AI Tutor.");
-      setMessages((prev) => prev.slice(0, -1)); // Remove the user message on failure
+      typingQueueRef.current = [];
+      setMessages((prev) =>
+        prev.filter(
+          (message) =>
+            message.id !== userMessage.id && message.id !== assistantMessageId,
+        ),
+      );
       setInput(messageText); // restore input
     }
   };
@@ -112,7 +176,7 @@ export function StudentAIChat() {
       <motion.div variants={itemVariants} className="shrink-0">
         <PageHeader
           title="AI Study Assistant"
-          description="Powered by Hugging Face DeepSeek R1. Get help with homework and generate quizzes."
+          description="Powered by Radora's Radium AI. Get help with homework and generate quizzes."
         />
       </motion.div>
 
@@ -123,7 +187,7 @@ export function StudentAIChat() {
               <div className="bg-indigo-100 p-1.5 rounded-md dark:bg-indigo-900/40">
                 <Bot className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
               </div>
-              <CardTitle className="text-sm font-medium">Radora AI Tutor</CardTitle>
+              <CardTitle className="text-sm font-medium">Radium AI Tutor</CardTitle>
             </div>
           </CardHeader>
           
@@ -147,22 +211,10 @@ export function StudentAIChat() {
                     ? "bg-indigo-600 text-white rounded-tr-sm"
                     : "bg-muted text-foreground rounded-tl-sm"
                 }`}>
-                  {msg.content}
+                  {msg.content || (sendMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null)}
                 </div>
               </div>
             ))}
-            {sendMutation.isPending && (
-              <div className="flex gap-3 max-w-[85%] mr-auto">
-                <div className="shrink-0 h-8 w-8 rounded-full flex items-center justify-center bg-gradient-to-br from-emerald-400 to-emerald-600 text-white">
-                  <Sparkles className="h-4 w-4" />
-                </div>
-                <div className="p-3 rounded-2xl text-sm bg-muted text-foreground rounded-tl-sm flex items-center gap-1.5">
-                  <div className="w-1.5 h-1.5 bg-muted-foreground/40 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <div className="w-1.5 h-1.5 bg-muted-foreground/40 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <div className="w-1.5 h-1.5 bg-muted-foreground/40 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                </div>
-              </div>
-            )}
           </CardContent>
 
           <CardFooter className="p-3 border-t bg-muted/10 shrink-0">

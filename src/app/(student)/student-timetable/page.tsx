@@ -1,5 +1,5 @@
-import { StudentTimetable } from "@/features/student-panel/components/student-timetable";
+import { StudentTimetableLive } from "@/features/student-panel/components/student-timetable-live";
 
 export default function Page(props: any) {
-  return <StudentTimetable {...props} />;
+  return <StudentTimetableLive {...props} />;
 }

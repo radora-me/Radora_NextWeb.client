@@ -12,6 +12,8 @@ const studentRoutePrefixes = [
   '/student-ai-chat',
   '/student-classroom-chat',
   '/student-homework',
+  '/student-tests',
+  '/student-leaderboard',
   '/student-notifications',
   '/student-fees',
 ];
@@ -21,9 +23,18 @@ const teacherRoutePrefixes = [
   '/teacher-students',
   '/teacher-attendance',
   '/teacher-homework',
+  '/teacher-tests',
+  '/teacher-leaderboard',
   '/teacher-chat',
   '/teacher-profile',
   '/teacher-notifications',
+];
+
+const librarianRoutePrefixes = [
+  '/librarian-dashboard',
+  '/librarian-books',
+  '/librarian-issues',
+  '/librarian-profile',
 ];
 
 const adminRoutePrefixes = [
@@ -36,6 +47,9 @@ const adminRoutePrefixes = [
   '/teachers',
   '/finance',
   '/notifications',
+  '/admin-profile',
+  '/admin-student-management',
+  '/leaderboard',
 ];
 
 const sharedRoutePrefixes = [
@@ -53,6 +67,7 @@ interface AuthContextType {
   ) => Promise<{ error?: string; user?: User }>;
   logout: () => Promise<void>;
   refreshSession: () => Promise<boolean>;
+  updateProfilePhoto: (url: string | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -71,10 +86,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const isAuthRoute = authRoutePrefixes.some(p => pathname.startsWith(p));
     const isStudentRoute = studentRoutePrefixes.some(p => pathname.startsWith(p));
     const isTeacherRoute = teacherRoutePrefixes.some(p => pathname.startsWith(p));
+    const isLibrarianRoute = librarianRoutePrefixes.some(p => pathname.startsWith(p));
     const isAdminRoute = adminRoutePrefixes.some(p => pathname.startsWith(p));
     const isSharedRoute = sharedRoutePrefixes.some(p => pathname.startsWith(p));
 
-    if (!user && (isStudentRoute || isTeacherRoute || isAdminRoute || isSharedRoute)) {
+    if (!user && (isStudentRoute || isTeacherRoute || isAdminRoute || isSharedRoute || isLibrarianRoute)) {
       router.push(`/login?callbackUrl=${encodeURIComponent(pathname)}`);
       return;
     }
@@ -85,15 +101,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       
-      if (user.role === 'student' && (isAdminRoute || isTeacherRoute)) {
+      if (user.role === 'student' && (isAdminRoute || isTeacherRoute || isLibrarianRoute)) {
         router.push('/student-dashboard');
-      } else if (user.role === 'teacher' && (isAdminRoute || isStudentRoute)) {
+      } else if (user.role === 'teacher' && (isAdminRoute || isStudentRoute || isLibrarianRoute)) {
         router.push('/teacher-dashboard');
-      } else if (user.role === 'admin' && (isStudentRoute || isTeacherRoute)) {
+      } else if (user.role === 'librarian' && (isAdminRoute || isStudentRoute || isTeacherRoute)) {
+        router.push('/librarian-dashboard');
+      } else if (user.role === 'admin' && (isStudentRoute || isTeacherRoute || isLibrarianRoute)) {
         router.push('/dashboard');
       } else if (isAuthRoute) {
         if (user.role === 'student') router.push('/student-dashboard');
         else if (user.role === 'teacher') router.push('/teacher-dashboard');
+        else if (user.role === 'librarian') router.push('/librarian-dashboard');
         else router.push('/dashboard');
       }
     }
@@ -198,8 +217,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const updateProfilePhoto = (url: string | null) => {
+    setUser((current) => current ? { ...current, image: url } : current);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, refreshSession }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, refreshSession, updateProfilePhoto }}>
       {children}
     </AuthContext.Provider>
   );

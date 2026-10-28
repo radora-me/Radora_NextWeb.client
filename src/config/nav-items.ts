@@ -5,9 +5,11 @@ import {
   ClipboardCheck,
   FileText,
   Calendar,
+  CalendarDays,
   WalletCards,
   Bell,
   CreditCard,
+  Trophy,
 } from 'lucide-react';
 
 import type { NavItem } from '@/types';
@@ -26,6 +28,12 @@ export const navItems: NavItem[] = [
     roles: ['admin', 'teacher'],
   },
   {
+    title: 'Student Management',
+    href: '/admin-student-management',
+    icon: Users,
+    roles: ['admin'],
+  },
+  {
     title: 'Teachers',
     href: '/teachers',
     icon: Users,
@@ -38,15 +46,27 @@ export const navItems: NavItem[] = [
     roles: ['admin', 'teacher'],
   },
   {
-    title: 'Exams & Grades',
+    title: 'Proctored Tests',
     href: '/exams',
     icon: FileText,
     roles: ['admin', 'teacher', 'student'],
   },
   {
+    title: 'Class Leaderboard',
+    href: '/leaderboard',
+    icon: Trophy,
+    roles: ['admin'],
+  },
+  {
     title: 'Timetable',
     href: '/timetable',
     icon: Calendar,
+    roles: ['admin', 'teacher', 'student'],
+  },
+  {
+    title: 'Events & Gallery',
+    href: '/events',
+    icon: CalendarDays,
     roles: ['admin', 'teacher', 'student'],
   },
   {

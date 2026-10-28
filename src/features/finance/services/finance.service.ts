@@ -8,6 +8,12 @@ export function useFinanceDashboard() {
   return useQuery<any>({ queryKey: ["finance-dashboard"], queryFn: () => fetchJsonWithAuth("/finance/dashboard"), staleTime: 30_000 });
 }
 
+export function useFinanceAiAnalysis() {
+  return useQuery<{ generatedAt: string; analysis: string; kpis: any; trend: any[] }>(
+    { queryKey: ["finance-ai-analysis"], queryFn: () => fetchJsonWithAuth("/finance/ai-analysis"), staleTime: 5 * 60_000 }
+  );
+}
+
 export function useFinanceResource(resource: FinanceResource, enabled = true) {
   return useQuery<any[]>({ queryKey: ["finance-resource", resource], queryFn: () => fetchJsonWithAuth(`/finance/${resource}`), enabled });
 }

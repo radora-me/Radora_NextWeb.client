@@ -8,12 +8,12 @@ import {
   GraduationCap, Pencil, Check, X, AlertCircle,
 } from "lucide-react";
 import { useAuth } from "@/features/auth/context/auth-context";
-import { useTeacherProfile, useUpdateTeacherProfile } from "@/features/teacher/services/teacher-profile.service";
+import { useTeacherProfile, useUpdateTeacherProfile, useUploadOwnProfilePhoto } from "@/features/teacher/services/teacher-profile.service";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ProfilePhoto } from "@/components/shared/profile-photo";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
@@ -29,12 +29,13 @@ function InfoField({ label, value }: { label: string; value?: string | null }) {
 }
 
 export function TeacherProfile() {
-  const { user } = useAuth();
+  const { user, updateProfilePhoto } = useAuth();
   const {
     data: profile,
     isLoading,
     isError,
   } = useTeacherProfile();
+  const { mutate: uploadPhoto, isPending: isUploading } = useUploadOwnProfilePhoto();
 
   if (isLoading) {
     return (
@@ -75,11 +76,8 @@ export function TeacherProfile() {
     );
   }
 
-  const getInitials = (name: string) =>
-    name.split(" ").map((n) => n[0]).join("").toUpperCase().substring(0, 2);
-
   const totalStudents = profile.courses.reduce(
-    (acc, c) => acc + (c._count?.enrollments ?? 0),
+    (acc, c) => acc + (c.studentCount ?? c._count?.enrollments ?? 0),
     0
   );
 
@@ -98,12 +96,13 @@ export function TeacherProfile() {
               <ArrowLeft className="h-4 w-4" />
             </Button>
           </Link>
-          <Avatar className="h-16 w-16 shadow-sm">
-            <AvatarImage src={user?.image || ""} alt={profile.name} className="object-cover" />
-            <AvatarFallback className="bg-gradient-to-br from-indigo-400 to-indigo-600 text-white text-lg font-bold">
-              {getInitials(profile.name)}
-            </AvatarFallback>
-          </Avatar>
+          <ProfilePhoto
+            name={profile.name}
+            url={profile.profilePhotoUrl || user?.image}
+            canUpload
+            uploading={isUploading}
+            onUpload={(file) => uploadPhoto(file, { onSuccess: (result) => { updateProfilePhoto(result.profilePhotoUrl); toast.success("Profile photo updated"); }, onError: (err) => toast.error(err.message) })}
+          />
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-bold text-slate-900">{profile.name}</h1>
@@ -111,9 +110,7 @@ export function TeacherProfile() {
                 Active Teacher
               </Badge>
             </div>
-            <p className="text-sm text-slate-500 mt-0.5">
-              Employee ID: {profile.id.substring(0, 8).toUpperCase()}
-            </p>
+            <p className="text-sm text-slate-500 mt-0.5">Manage your teaching profile and assigned classes.</p>
           </div>
         </div>
       </div>
@@ -207,11 +204,11 @@ export function TeacherProfile() {
                         course.title?.trim() ?? ""
                       );
                     const label = isUUID
-                      ? `Class${course.description ? ` — Section ${course.description}` : ""}`
-                      : `${course.title}${course.description ? ` — Section ${course.description}` : ""}`;
+                      ? `Class${course.description || course.section ? ` — Section ${course.description || course.section}` : ""}`
+                      : `${course.title}${course.description || course.section ? ` — Section ${course.description || course.section}` : ""}`;
                     return (
                       <div
-                        key={course.id}
+                        key={course.id || course.title}
                         className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50 transition-colors"
                       >
                         <div className="flex items-start gap-3">
@@ -221,8 +218,8 @@ export function TeacherProfile() {
                           <div>
                             <p className="font-semibold text-slate-900">{label}</p>
                             <p className="text-sm text-slate-500">
-                              {course._count?.enrollments || 0} student
-                              {(course._count?.enrollments || 0) !== 1 ? "s" : ""} enrolled
+                              {course.studentCount ?? course._count?.enrollments ?? 0} student
+                              {(course.studentCount ?? course._count?.enrollments ?? 0) !== 1 ? "s" : ""} enrolled
                             </p>
                           </div>
                         </div>

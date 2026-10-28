@@ -97,7 +97,7 @@ export function TeacherHomework() {
   const { data: submissionsData, isLoading: submissionsLoading, refetch: refetchSubmissions } = useTeacherSubmissions(selectedHwForSubmissions?.id || null);
   const { mutate: gradeSubmission, isPending: isGrading } = useGradeSubmission();
 
-  const todayStr = new Date().toLocaleDateString("en-CA");
+  const tomorrowStr = new Date(Date.now() + 86400000).toLocaleDateString("en-CA");
 
   // Handle File Selection
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -138,8 +138,8 @@ export function TeacherHomework() {
       return;
     }
 
-    if (dueAt && dueAt < todayStr) {
-      toast.error("Due date cannot be in the past.");
+    if (dueAt && dueAt < tomorrowStr) {
+      toast.error("Due date must be a future date.");
       return;
     }
 
@@ -185,8 +185,8 @@ export function TeacherHomework() {
   const handleUpdateAssignment = () => {
     if (!editingHomework) return;
 
-    if (dueAt && dueAt < todayStr) {
-      toast.error("Due date cannot be in the past.");
+    if (dueAt && dueAt < tomorrowStr) {
+      toast.error("Due date must be a future date.");
       return;
     }
 
@@ -450,7 +450,7 @@ export function TeacherHomework() {
                     <Input 
                       id="due-date" 
                       type="date" 
-                      min={todayStr}
+                      min={tomorrowStr}
                       className="focus-visible:ring-indigo-500 bg-slate-50/50" 
                       value={dueAt}
                       onChange={(e) => setDueAt(e.target.value)}
@@ -589,7 +589,7 @@ export function TeacherHomework() {
                     <Input 
                       id="edit-due-date" 
                       type="date" 
-                      min={todayStr}
+                      min={tomorrowStr}
                       className="focus-visible:ring-indigo-500 bg-slate-50/50" 
                       value={dueAt}
                       onChange={(e) => setDueAt(e.target.value)}
