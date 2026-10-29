@@ -26,6 +26,26 @@ function fmtDate(d: string) {
 
 type ScanState = "requesting" | "active" | "denied" | "error";
 
+// ── Beep sound via Web Audio API (no external file needed) ────────────────────
+function playBeep(frequency = 1200, duration = 180) {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(frequency, ctx.currentTime);
+    gain.gain.setValueAtTime(0.5, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration / 1000);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + duration / 1000);
+    osc.onended = () => ctx.close();
+  } catch {
+    // Audio not available — silently ignore
+  }
+}
+
 // ── QR Scanner ────────────────────────────────────────────────────────────────
 function QRScanner({ onScan, onClose }: { onScan: (value: string) => void; onClose: () => void }) {
   const videoRef  = useRef<HTMLVideoElement>(null);
@@ -117,6 +137,7 @@ function QRScanner({ onScan, onClose }: { onScan: (value: string) => void; onClo
 
         if (raw) {
           scannedRef.current = true;
+          playBeep();
           stopCamera();
           try {
             const parsed = JSON.parse(raw);

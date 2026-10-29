@@ -1,36 +1,110 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BrainCircuit, ChevronDown, ChevronUp, RefreshCw, Sparkles } from "lucide-react";
 import { useFinanceAiAnalysis } from "../services/finance.service";
 
-function renderAnalysis(text: string) {
+/**
+ * Strip markdown formatting characters (**, ##, *, #) from the AI response
+ * while preserving the actual text content.
+ */
+function stripMarkdown(text: string): string {
+  return text
+    .replace(/^#{1,6}\s*/gm, "")    // remove heading markers (## , ### , etc.)
+    .replace(/\*\*(.*?)\*\*/g, "$1") // remove bold markers **text** → text
+    .replace(/\*(.*?)\*/g, "$1")     // remove italic markers *text* → text
+    .replace(/`{1,3}(.*?)`{1,3}/g, "$1"); // remove inline code markers
+}
+
+/**
+ * Custom hook for typewriter effect — reveals text character by character.
+ */
+function useTypewriter(fullText: string, speed = 12) {
+  const [displayed, setDisplayed] = useState("");
+  const [isDone, setIsDone] = useState(false);
+  const prevTextRef = useRef("");
+
+  useEffect(() => {
+    // If text hasn't changed, don't restart animation
+    if (fullText === prevTextRef.current) return;
+    prevTextRef.current = fullText;
+
+    if (!fullText) {
+      setDisplayed("");
+      setIsDone(true);
+      return;
+    }
+
+    setDisplayed("");
+    setIsDone(false);
+    let index = 0;
+
+    const interval = setInterval(() => {
+      index++;
+      setDisplayed(fullText.slice(0, index));
+      if (index >= fullText.length) {
+        clearInterval(interval);
+        setIsDone(true);
+      }
+    }, speed);
+
+    return () => clearInterval(interval);
+  }, [fullText, speed]);
+
+  // Allow skipping to full text
+  const skipToEnd = () => {
+    setDisplayed(fullText);
+    setIsDone(true);
+  };
+
+  return { displayed, isDone, skipToEnd };
+}
+
+/**
+ * Render plain text (after markdown stripping) into styled paragraphs.
+ * Recognizes numbered items (1. 2. ...) and bullet-like lines (- •).
+ */
+function renderPlainText(text: string) {
   return text.split("\n").map((line, i) => {
-    if (/^\*\*(.+)\*\*/.test(line)) {
-      const heading = line.replace(/^\*\*(.+)\*\*.*/, "$1");
-      const rest = line.replace(/^\*\*(.+)\*\*/, "").trim();
+    const trimmed = line.trim();
+    if (trimmed === "") return null;
+
+    // Numbered heading lines like "1. Overall Financial Health"
+    if (/^\d+\.\s/.test(trimmed)) {
+      const content = trimmed.replace(/^\d+\.\s*/, "");
       return (
         <p key={i} className="mt-4 first:mt-0">
-          <span className="font-semibold text-foreground">{heading}</span>
-          {rest && <span className="text-muted-foreground"> {rest}</span>}
+          <span className="font-semibold text-foreground">{content}</span>
         </p>
       );
     }
-    if (/^[-•]/.test(line.trim())) {
+
+    // Bullet lines
+    if (/^[-•]\s/.test(trimmed)) {
       return (
         <li key={i} className="ml-4 mt-1 list-disc text-muted-foreground">
-          {line.replace(/^[-•]\s*/, "")}
+          {trimmed.replace(/^[-•]\s*/, "")}
         </li>
       );
     }
-    if (line.trim() === "") return null;
-    return <p key={i} className="mt-2 text-muted-foreground">{line}</p>;
+
+    return (
+      <p key={i} className="mt-2 text-muted-foreground">
+        {trimmed}
+      </p>
+    );
   });
 }
 
 export function FinanceAiAnalysis() {
   const { data, isLoading, isFetching, refetch } = useFinanceAiAnalysis();
   const [expanded, setExpanded] = useState(true);
+
+  // Strip markdown from the analysis text
+  const cleanAnalysis = data?.analysis ? stripMarkdown(data.analysis) : "";
+
+  // Typewriter effect on the cleaned text
+  const { displayed, isDone, skipToEnd } = useTypewriter(cleanAnalysis, 12);
 
   return (
     <div className="mb-6 rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-slate-50 shadow-sm dark:border-violet-900 dark:from-violet-950/30 dark:to-slate-900/40">
@@ -75,10 +149,23 @@ export function FinanceAiAnalysis() {
           {isLoading ? (
             <div className="flex items-center gap-3 text-sm text-muted-foreground">
               <RefreshCw className="h-4 w-4 animate-spin text-violet-500" />
-              Groq is analysing your finance department data…
+              Radium AI is analysing your finance department data…
             </div>
           ) : data?.analysis ? (
-            <div className="text-sm leading-6">{renderAnalysis(data.analysis)}</div>
+            <div className="relative">
+              <div className="text-sm leading-6">{renderPlainText(displayed)}</div>
+              {!isDone && (
+                <div className="mt-3 flex items-center gap-3">
+                  <span className="inline-block h-4 w-0.5 animate-pulse bg-violet-500" />
+                  <button
+                    onClick={skipToEnd}
+                    className="text-[11px] font-medium text-violet-600 hover:text-violet-800 dark:text-violet-400 dark:hover:text-violet-300"
+                  >
+                    Skip animation
+                  </button>
+                </div>
+              )}
+            </div>
           ) : (
             <p className="text-sm text-muted-foreground">No analysis available. Click Refresh to generate one.</p>
           )}

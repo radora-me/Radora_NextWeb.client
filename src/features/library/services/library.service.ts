@@ -1,11 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchJsonWithAuth, fetchWithAuth } from "@/lib/api-client";
-import type { Book, BookIssueRecord, LibraryAdminOverview, LibrarianProfile } from "@/types/api.types";
+import type { Book, BookIssueRecord, LibraryAdminOverview, LibrarianProfile, StudentLibraryOverview } from "@/types/api.types";
 
 const QK_BOOKS = "library-books";
 const QK_ISSUES = "library-issues";
 const QK_OVERVIEW = "library-admin-overview";
 const QK_LIBRARIANS = "librarians";
+const QK_STUDENT_LIBRARY = "student-library";
 
 function invalidate(client: ReturnType<typeof useQueryClient>, keys: string[]) {
   keys.forEach((k) => client.invalidateQueries({ queryKey: [k] }));
@@ -123,5 +124,15 @@ export function useDeleteLibrarian() {
       if (!res.ok) { const j = await res.json(); throw new Error(j.error || "Failed to delete librarian"); }
     },
     onSuccess: () => invalidate(client, [QK_LIBRARIANS]),
+  });
+}
+
+
+// ── Student ───────────────────────────────────────────────────────────────────
+export function useStudentLibrary() {
+  return useQuery<StudentLibraryOverview>({
+    queryKey: [QK_STUDENT_LIBRARY],
+    queryFn: () => fetchJsonWithAuth("/library/student/my-issues"),
+    staleTime: 30_000,
   });
 }

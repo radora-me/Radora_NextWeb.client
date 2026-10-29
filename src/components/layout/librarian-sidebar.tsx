@@ -35,8 +35,8 @@ export function LibrarianSidebar() {
             <Image src="/logo/Next.png" alt="Logo" width={48} height={48} className="object-cover rounded-xl" />
           </div>
           <div className="flex flex-col group-data-[collapsible=icon]:hidden">
-            <span className="text-sm font-bold tracking-tight text-sidebar-foreground">Radora Next</span>
-            <span className="text-[11px] text-sidebar-foreground/60">Library Portal</span>
+            <span className="text-base font-bold tracking-tight text-sidebar-foreground">Radora Next</span>
+            <span className="text-xs text-sidebar-foreground/60">Library Portal</span>
           </div>
         </Link>
       </SidebarHeader>
@@ -45,7 +45,7 @@ export function LibrarianSidebar() {
 
       <SidebarContent className="px-2 pt-2">
         <SidebarGroup>
-          <SidebarGroupLabel className="text-[11px] uppercase tracking-wider text-sidebar-foreground/40 px-3">
+          <SidebarGroupLabel className="text-xs uppercase tracking-wider text-sidebar-foreground/40 px-3">
             Main Menu
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -56,9 +56,9 @@ export function LibrarianSidebar() {
                     render={<Link href={item.href} />}
                     isActive={isActive(item.href)}
                     tooltip={item.name}
-                    className="h-9 transition-colors"
+                    className="h-10 text-base transition-colors"
                   >
-                    <item.icon className="h-4 w-4" />
+                    <item.icon className="h-5 w-5" />
                     <span>{item.name}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -67,33 +67,6 @@ export function LibrarianSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-
-      <SidebarFooter className="p-3">
-        <SidebarSeparator className="bg-sidebar-border mb-2" />
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              render={<button type="button" suppressHydrationWarning />}
-              onClick={logout}
-              tooltip="Sign Out"
-              className="h-9 text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors cursor-pointer"
-            >
-              <LogOut className="h-4 w-4" />
-              <span>Sign Out</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-        <SidebarSeparator className="bg-sidebar-border my-2" />
-        <div className="flex items-center gap-3 px-2 group-data-[collapsible=icon]:hidden">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-orange-600 text-[11px] font-bold text-white uppercase">
-            {initials}
-          </div>
-          <div className="flex flex-col">
-            <span className="text-xs font-medium text-sidebar-foreground truncate max-w-[120px]">{userName}</span>
-            <span className="text-[11px] text-sidebar-foreground/50 truncate max-w-[120px]">{userEmail}</span>
-          </div>
-        </div>
-      </SidebarFooter>
     </Sidebar>
   );
 }

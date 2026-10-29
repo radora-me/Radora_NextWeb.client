@@ -6,6 +6,7 @@ import {
   Bot,
   MessageSquare,
   BookOpen,
+  BookMarked,
   ClipboardCheck,
   Bell,
   CreditCard,
@@ -27,6 +28,11 @@ export const studentNavItems = [
     title: "Homework",
     href: "/student-homework",
     icon: BookOpen,
+  },
+  {
+    title: "Library",
+    href: "/student-library",
+    icon: BookMarked,
   },
   {
     title: "Proctored Tests",

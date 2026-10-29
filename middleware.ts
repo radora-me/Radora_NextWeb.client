@@ -7,6 +7,7 @@ const studentRoutePrefixes = [
   '/student-timetable',
   '/student-ai-chat',
   '/student-classroom-chat',
+  '/student-library',
 ];
 
 const teacherRoutePrefixes = [

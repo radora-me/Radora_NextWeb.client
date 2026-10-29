@@ -459,6 +459,13 @@ export interface LibrarianProfile {
   role: string;
 }
 
+export interface StudentLibraryOverview {
+  currentlyIssued: number;
+  overdueCount: number;
+  totalReturned: number;
+  issues: BookIssueRecord[];
+}
+
 export interface EventMedia {
     id: string;
     caption: string | null;
