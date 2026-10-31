@@ -131,7 +131,7 @@
 }
 
 
-/* Sidebar thin scrollbar */
+/* Sidebar thin scrollbar (tokens are oklch, so use them directly) */
 .sidebar-scroll::-webkit-scrollbar {
   width: 4px;
 }
@@ -139,14 +139,14 @@
   background: transparent;
 }
 .sidebar-scroll::-webkit-scrollbar-thumb {
-  background: hsl(var(--sidebar-border));
+  background: var(--sidebar-border);
   border-radius: 9999px;
 }
 .sidebar-scroll::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--sidebar-foreground) / 0.3);
+  background: color-mix(in oklch, var(--sidebar-foreground) 35%, transparent);
 }
 /* Firefox */
 .sidebar-scroll {
   scrollbar-width: thin;
-  scrollbar-color: hsl(var(--sidebar-border)) transparent;
+  scrollbar-color: var(--sidebar-border) transparent;
 }

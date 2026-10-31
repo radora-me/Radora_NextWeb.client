@@ -18,6 +18,14 @@ export interface NavItem {
   badge?: string;
 }
 
+/** Nav entry shape consumed by the shared portal sidebar. */
+export interface PortalNavItem {
+  title: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  badge?: string;
+}
+
 export interface Student {
   id: string;
   firstName: string;

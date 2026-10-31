@@ -1,72 +1,29 @@
 "use client";
 
-import Link from "next/link";
-import Image from "next/image";
-import { usePathname } from "next/navigation";
-import { LayoutDashboard, BookMarked, BookOpen, User, LogOut } from "lucide-react";
-import { useAuth } from "@/features/auth/context/auth-context";
-import {
-  Sidebar, SidebarContent, SidebarFooter, SidebarGroup,
-  SidebarGroupContent, SidebarGroupLabel, SidebarHeader,
-  SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarSeparator,
-} from "@/components/ui/sidebar";
+import { BookMarked, BookOpen, LayoutDashboard, User } from "lucide-react";
 
-const navigation = [
-  { name: "Dashboard",    href: "/librarian-dashboard", icon: LayoutDashboard },
-  { name: "Book Registry", href: "/librarian-books",    icon: BookMarked },
-  { name: "Issue / Return", href: "/librarian-issues",  icon: BookOpen },
-  { name: "My Profile",   href: "/librarian-profile",   icon: User },
+import { PortalSidebar } from "@/components/layout/portal-sidebar";
+import type { PortalNavItem } from "@/types";
+
+/**
+ * Librarian portal. `My Profile` moved from the nav list into the account
+ * footer; every href and label is unchanged.
+ */
+const navigation: PortalNavItem[] = [
+  { title: "Dashboard", href: "/librarian-dashboard", icon: LayoutDashboard },
+  { title: "Issue / Return", href: "/librarian-issues", icon: BookOpen },
+  { title: "Book Registry", href: "/librarian-books", icon: BookMarked },
 ];
 
 export function LibrarianSidebar() {
-  const pathname = usePathname();
-  const { user, logout } = useAuth();
-
-  const userName  = user?.name  || "Librarian";
-  const userEmail = user?.email || "librarian@radora.com";
-  const initials  = userName.split(" ").filter(Boolean).slice(0, 2).map((p) => p[0]).join("").toUpperCase() || "LB";
-  const isActive  = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
-
   return (
-    <Sidebar collapsible="icon" className="border-r-0">
-      <SidebarHeader className="p-4 group-data-[state=collapsed]:px-2 group-data-[state=collapsed]:py-4">
-        <Link href="/librarian-dashboard" className="flex items-center gap-3 group-data-[state=collapsed]:justify-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 shadow-lg shadow-amber-500/20">
-            <Image src="/logo/Next.png" alt="Logo" width={48} height={48} className="object-cover rounded-xl" />
-          </div>
-          <div className="flex flex-col group-data-[collapsible=icon]:hidden">
-            <span className="text-base font-bold tracking-tight text-sidebar-foreground">Radora Next</span>
-            <span className="text-xs text-sidebar-foreground/60">Library Portal</span>
-          </div>
-        </Link>
-      </SidebarHeader>
-
-      <SidebarSeparator className="bg-sidebar-border" />
-
-      <SidebarContent className="px-2 pt-2">
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-xs uppercase tracking-wider text-sidebar-foreground/40 px-3">
-            Main Menu
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {navigation.map((item) => (
-                <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton
-                    render={<Link href={item.href} />}
-                    isActive={isActive(item.href)}
-                    tooltip={item.name}
-                    className="h-10 text-base transition-colors"
-                  >
-                    <item.icon className="h-5 w-5" />
-                    <span>{item.name}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-    </Sidebar>
+    <PortalSidebar
+      portalLabel="Library"
+      homeHref="/librarian-dashboard"
+      items={navigation}
+      accountHref="/librarian-profile"
+      accountLabel="My Profile"
+      accountIcon={User}
+    />
   );
 }

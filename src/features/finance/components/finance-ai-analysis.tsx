@@ -1,57 +1,48 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { BrainCircuit, ChevronDown, ChevronUp, RefreshCw, Sparkles } from "lucide-react";
+import { BrainCircuit, ChevronDown, ChevronUp, Loader2, RefreshCw } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { formatDateTime } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { useFinanceAiAnalysis } from "../services/finance.service";
 
 /**
- * Strip markdown formatting characters (**, ##, *, #) from the AI response
- * while preserving the actual text content.
+ * Strip markdown formatting characters from the AI response while preserving
+ * the text content.
  */
 function stripMarkdown(text: string): string {
   return text
-    .replace(/^#{1,6}\s*/gm, "")    // remove heading markers (## , ### , etc.)
-    .replace(/\*\*(.*?)\*\*/g, "$1") // remove bold markers **text** → text
-    .replace(/\*(.*?)\*/g, "$1")     // remove italic markers *text* → text
-    .replace(/`{1,3}(.*?)`{1,3}/g, "$1"); // remove inline code markers
+    .replace(/^#{1,6}\s*/gm, "")
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/\*(.*?)\*/g, "$1")
+    .replace(/`{1,3}(.*?)`{1,3}/g, "$1");
 }
 
-/**
- * Custom hook for typewriter effect — reveals text character by character.
- */
+/** Reveals the analysis character by character. */
 function useTypewriter(fullText: string, speed = 12) {
   const [displayed, setDisplayed] = useState("");
   const [isDone, setIsDone] = useState(false);
-  const prevTextRef = useRef("");
+  const previousText = useRef("");
 
   useEffect(() => {
-    // If text hasn't changed, don't restart animation
-    if (fullText === prevTextRef.current) return;
-    prevTextRef.current = fullText;
+    if (fullText === previousText.current) return;
+    previousText.current = fullText;
 
-    if (!fullText) {
-      setDisplayed("");
-      setIsDone(true);
-      return;
-    }
-
-    setDisplayed("");
-    setIsDone(false);
     let index = 0;
 
     const interval = setInterval(() => {
-      index++;
+      index += 1;
       setDisplayed(fullText.slice(0, index));
-      if (index >= fullText.length) {
-        clearInterval(interval);
-        setIsDone(true);
-      }
+      setIsDone(index >= fullText.length);
+      if (index >= fullText.length) clearInterval(interval);
     }, speed);
 
     return () => clearInterval(interval);
   }, [fullText, speed]);
 
-  // Allow skipping to full text
   const skipToEnd = () => {
     setDisplayed(fullText);
     setIsDone(true);
@@ -60,117 +51,128 @@ function useTypewriter(fullText: string, speed = 12) {
   return { displayed, isDone, skipToEnd };
 }
 
-/**
- * Render plain text (after markdown stripping) into styled paragraphs.
- * Recognizes numbered items (1. 2. ...) and bullet-like lines (- •).
- */
 function renderPlainText(text: string) {
-  return text.split("\n").map((line, i) => {
+  return text.split("\n").map((line, index) => {
     const trimmed = line.trim();
     if (trimmed === "") return null;
 
-    // Numbered heading lines like "1. Overall Financial Health"
     if (/^\d+\.\s/.test(trimmed)) {
       const content = trimmed.replace(/^\d+\.\s*/, "");
       return (
-        <p key={i} className="mt-4 first:mt-0">
-          <span className="font-semibold text-foreground">{content}</span>
+        <p key={index} className="mt-3 first:mt-0">
+          <span className="font-medium text-foreground">{content}</span>
         </p>
       );
     }
 
-    // Bullet lines
     if (/^[-•]\s/.test(trimmed)) {
       return (
-        <li key={i} className="ml-4 mt-1 list-disc text-muted-foreground">
+        <li key={index} className="mt-1 ml-4 list-disc text-muted-foreground">
           {trimmed.replace(/^[-•]\s*/, "")}
         </li>
       );
     }
 
     return (
-      <p key={i} className="mt-2 text-muted-foreground">
+      <p key={index} className="mt-2 text-muted-foreground">
         {trimmed}
       </p>
     );
   });
 }
 
-export function FinanceAiAnalysis() {
+type FinanceAiAnalysisProps = {
+  className?: string;
+  defaultExpanded?: boolean;
+};
+
+/**
+ * Compact, collapsed-by-default insight strip. Expanding reveals the generated
+ * analysis; the strip itself never interprets or writes accounting records.
+ */
+export function FinanceAiAnalysis({
+  className,
+  defaultExpanded = false,
+}: FinanceAiAnalysisProps) {
   const { data, isLoading, isFetching, refetch } = useFinanceAiAnalysis();
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(defaultExpanded);
 
-  // Strip markdown from the analysis text
   const cleanAnalysis = data?.analysis ? stripMarkdown(data.analysis) : "";
+  const summary =
+    cleanAnalysis
+      .split("\n")
+      .map((line) => line.trim())
+      .find(Boolean) ?? "";
 
-  // Typewriter effect on the cleaned text
   const { displayed, isDone, skipToEnd } = useTypewriter(cleanAnalysis, 12);
 
   return (
-    <div className="mb-6 rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-slate-50 shadow-sm dark:border-violet-900 dark:from-violet-950/30 dark:to-slate-900/40">
-      <div className="flex items-center justify-between px-5 py-4">
-        <div className="flex items-center gap-2.5">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100 dark:bg-violet-900/50">
-            <BrainCircuit className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+    <Card size="sm" className={cn("gap-0 py-0", className)}>
+      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-2 px-3 py-2.5">
+        <BrainCircuit className="size-4 shrink-0 text-primary" aria-hidden="true" />
+        <span className="text-sm font-medium text-foreground">Finance analysis</span>
+
+        {isLoading ? (
+          <span className="flex min-w-0 flex-1 items-center gap-2 text-xs text-muted-foreground">
+            <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+            Analysing finance records…
           </span>
-          <div>
-            <p className="text-sm font-semibold text-foreground">AI Finance Analysis</p>
-            {data?.generatedAt && (
-              <p className="text-[11px] text-muted-foreground">
-                Generated {new Date(data.generatedAt).toLocaleString("en-IN")}
-              </p>
-            )}
-          </div>
-          <span className="ml-1 flex items-center gap-1 rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-medium text-violet-700 dark:bg-violet-900/50 dark:text-violet-300">
-            <Sparkles className="h-3 w-3" /> Radora&apos;s Radium AI
+        ) : (
+          <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+            {summary || "No analysis returned."}
           </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => refetch()}
+        )}
+
+        {data?.generatedAt ? (
+          <span className="hidden shrink-0 text-[11px] text-muted-foreground sm:inline">
+            Generated {formatDateTime(data.generatedAt)}
+          </span>
+        ) : null}
+
+        <div className="ml-auto flex shrink-0 items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Refresh analysis"
+            title="Refresh analysis"
             disabled={isFetching}
-            className="flex items-center gap-1.5 rounded-lg border bg-white px-3 py-1.5 text-xs font-medium hover:bg-muted disabled:opacity-50 dark:bg-slate-900"
+            onClick={() => refetch()}
           >
-            <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
-            Refresh
-          </button>
-          <button
-            onClick={() => setExpanded((v) => !v)}
-            className="flex items-center gap-1 rounded-lg border bg-white px-3 py-1.5 text-xs font-medium hover:bg-muted dark:bg-slate-900"
+            <RefreshCw className={cn("size-3.5", isFetching && "animate-spin")} aria-hidden="true" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-expanded={expanded}
+            onClick={() => setExpanded((value) => !value)}
           >
-            {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            {expanded ? <ChevronUp aria-hidden="true" /> : <ChevronDown aria-hidden="true" />}
             {expanded ? "Collapse" : "Expand"}
-          </button>
+          </Button>
         </div>
       </div>
 
-      {expanded && (
-        <div className="border-t border-violet-100 px-5 py-4 dark:border-violet-900/50">
+      {expanded ? (
+        <div className="border-t px-4 py-3">
           {isLoading ? (
-            <div className="flex items-center gap-3 text-sm text-muted-foreground">
-              <RefreshCw className="h-4 w-4 animate-spin text-violet-500" />
-              Radium AI is analysing your finance department data…
-            </div>
+            <p className="text-sm text-muted-foreground">Analysing finance records…</p>
           ) : data?.analysis ? (
-            <div className="relative">
+            <>
               <div className="text-sm leading-6">{renderPlainText(displayed)}</div>
-              {!isDone && (
+              {!isDone ? (
                 <div className="mt-3 flex items-center gap-3">
-                  <span className="inline-block h-4 w-0.5 animate-pulse bg-violet-500" />
-                  <button
-                    onClick={skipToEnd}
-                    className="text-[11px] font-medium text-violet-600 hover:text-violet-800 dark:text-violet-400 dark:hover:text-violet-300"
-                  >
+                  <span className="inline-block h-4 w-0.5 animate-pulse bg-primary" aria-hidden="true" />
+                  <Button variant="ghost" size="xs" onClick={skipToEnd}>
                     Skip animation
-                  </button>
+                  </Button>
                 </div>
-              )}
-            </div>
+              ) : null}
+            </>
           ) : (
-            <p className="text-sm text-muted-foreground">No analysis available. Click Refresh to generate one.</p>
+            <p className="text-sm text-muted-foreground">No analysis returned.</p>
           )}
         </div>
-      )}
-    </div>
+      ) : null}
+    </Card>
   );
 }
