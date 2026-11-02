@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronDown, ChevronRight, LogOut, PanelLeft, Search } from "lucide-react";
+import { ChevronDown, ChevronRight, LogOut, Search } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
@@ -21,7 +21,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarSeparator,
-  useSidebar,
 } from "@/components/ui/sidebar";
 import {
   groupNavItems,
@@ -66,7 +65,6 @@ export function PortalSidebar({
 }: PortalSidebarProps) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
-  const { toggleSidebar } = useSidebar();
 
   const [query, setQuery] = useState("");
   const [collapsedGroups, setCollapsedGroups] = useState<
@@ -140,15 +138,6 @@ export function PortalSidebar({
             </span>
           </Link>
 
-          <button
-            type="button"
-            onClick={toggleSidebar}
-            aria-label="Collapse sidebar"
-            title="Collapse sidebar"
-            className="hidden size-7 shrink-0 cursor-pointer items-center justify-center rounded-md text-sidebar-foreground/50 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground md:flex group-data-[collapsible=icon]:md:hidden"
-          >
-            <PanelLeft className="size-4" />
-          </button>
         </div>
       </SidebarHeader>
 

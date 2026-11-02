@@ -6,6 +6,7 @@ import { useAuth } from "@/features/auth/context/auth-context";
 import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
+import { WalkthroughEnquiryCta } from "@/features/walkthrough/components/walkthrough-enquiry-cta";
 import { 
   Loader2, 
   Eye, 
@@ -419,6 +420,7 @@ export function LoginPage() {
               .
             </p>
           </form>
+          <WalkthroughEnquiryCta />
         </motion.div>
       </div>
 
